@@ -1,0 +1,8 @@
+from rest_framework.routers import DefaultRouter
+from .views import BuildingViewSet, ApartmentViewSet
+
+router = DefaultRouter()
+router.register(r'building', BuildingViewSet)
+router.register(r'apartment', ApartmentViewSet)
+
+urlpatterns = router.urls

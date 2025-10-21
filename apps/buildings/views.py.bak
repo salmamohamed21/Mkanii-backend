@@ -1,0 +1,36 @@
+from rest_framework import viewsets, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from .models import Building, Apartment
+from .serializers import BuildingSerializer, ApartmentSerializer
+from mkani.core.permissions import DynamicRolePermission
+
+class BuildingViewSet(viewsets.ModelViewSet):
+    queryset = Building.objects.all()
+    serializer_class = BuildingSerializer
+    permission_classes = [DynamicRolePermission]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'address']
+    ordering_fields = ['name', 'address']
+
+    @action(detail=False, methods=['get'], permission_classes=[DynamicRolePermission])
+    def recent(self, request):
+        qs = self.get_queryset().order_by('-id')[:10]
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+
+class ApartmentViewSet(viewsets.ModelViewSet):
+    queryset = Apartment.objects.all()
+    serializer_class = ApartmentSerializer
+    permission_classes = [DynamicRolePermission]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['id']
+    ordering_fields = ['id']
+
+    @action(detail=False, methods=['get'], permission_classes=[DynamicRolePermission])
+    def recent(self, request):
+        qs = self.get_queryset().order_by('-id')[:10]
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+

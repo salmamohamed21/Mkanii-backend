@@ -1,0 +1,13 @@
+from rest_framework import serializers
+from .models import Package, ResidentPackageSubscription
+
+class PackageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Package
+        fields = '__all__'
+
+
+class ResidentPackageSubscriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResidentPackageSubscription
+        fields = '__all__'

@@ -1,0 +1,8 @@
+from rest_framework.routers import DefaultRouter
+from .views import PackageViewSet, ResidentPackageSubscriptionViewSet
+
+router = DefaultRouter()
+router.register(r'package', PackageViewSet)
+router.register(r'residentpackagesubscription', ResidentPackageSubscriptionViewSet)
+
+urlpatterns = router.urls

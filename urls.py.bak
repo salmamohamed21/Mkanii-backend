@@ -1,0 +1,22 @@
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('chat/', include('mkani.apps.chat.urls')),
+    path('ads/', include('mkani.apps.ads.urls')),
+    path('accounts/', include('mkani.apps.accounts.urls')),
+    path('notifications/', include('mkani.apps.notifications.urls')),
+    path('payments/', include('mkani.apps.payments.urls')),
+    path('packages/', include('mkani.apps.packages.urls')),
+    path('maintenance/', include('mkani.apps.maintenance.urls')),
+    path('buildings/', include('mkani.apps.buildings.urls')),
+    path('admin/', admin.site.urls),
+    path('api/accounts/', include('mkani.apps.accounts.urls')),
+    path('api/buildings/', include('mkani.apps.buildings.urls')),
+    path('api/ads/', include('mkani.apps.ads.urls')),
+    path('api/packages/', include('mkani.apps.packages.urls')),
+    path('api/payments/', include('mkani.apps.payments.urls')),
+    path('api/maintenance/', include('mkani.apps.maintenance.urls')),
+    path('api/chat/', include('mkani.apps.chat.urls')),
+    path('api/notifications/', include('mkani.apps.notifications.urls')),
+]
