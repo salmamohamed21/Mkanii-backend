@@ -3,6 +3,6 @@ services:
     name: mkani-backend
     env: python
     buildCommand: ""
-    startCommand: gunicorn wsgi:application
+    startCommand: gunicorn mkani.wsgi:application
     plan: free
     autoDeploy: true
