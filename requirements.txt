@@ -1,0 +1,14 @@
+django>=4.2
+djangorestframework
+djangorestframework-simplejwt
+psycopg2-binary
+celery[redis]
+redis
+django-cors-headers
+channels
+channels-redis
+python-dotenv
+gunicorn
+django-filter
+drf-spectacular
+google-auth
