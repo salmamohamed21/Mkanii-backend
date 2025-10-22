@@ -10,7 +10,7 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 import mkani.apps.notifications.routing as notifications_routing
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mkani.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
 django_asgi_app = get_asgi_application()
 

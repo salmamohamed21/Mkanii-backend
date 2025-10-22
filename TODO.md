@@ -1,8 +1,6 @@
-# TODO: Fix Railway Deployment Path
+# TODO List for Fixing DJANGO_SETTINGS_MODULE
 
-- [x] Update start.sh with correct Gunicorn command to wsgi:application
-- [x] Update Procfile with correct Gunicorn command to wsgi:application
-- [x] Verify wsgi.py is correct (already confirmed)
-- [x] Fix module import issues by adding sys.path in wsgi.py, asgi.py, and manage.py
-- [x] Fix drf-spectacular schema generation by adding DEFAULT_SCHEMA_CLASS
-- [ ] Test deployment on Railway
+- [x] Edit wsgi.py to change 'mkani.settings' to 'settings'
+- [x] Edit asgi.py to change 'mkani.settings' to 'settings'
+- [x] Edit manage.py to change 'mkani.settings' to 'settings'
+- [x] Verify the changes by checking the files or running Django commands
