@@ -1,1 +1,1 @@
-web: gunicorn --pythonpath .. mkani.wsgi
+web: gunicorn --pythonpath . mkani.wsgi:application
