@@ -1,5 +1,21 @@
-.env
+# Python
 __pycache__/
 *.pyc
-db.sqlite3
+*.pyo
+*.pyd
+*.sqlite3
+
+# Virtualenv
+.venv/
+env/
+venv/
+
+# IDEs
+.vscode/
+.idea/
+
+# Environment variables
+.env
+
+# Logs
 *.log
