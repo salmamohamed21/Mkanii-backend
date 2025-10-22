@@ -1,1 +1,1 @@
-web: gunicorn mkani.wsgi
+web: gunicorn mkani.wsgi --chdir mkani
