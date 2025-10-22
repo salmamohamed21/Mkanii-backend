@@ -12,3 +12,4 @@ gunicorn
 django-filter
 drf-spectacular
 google-auth
+dj-database-url
