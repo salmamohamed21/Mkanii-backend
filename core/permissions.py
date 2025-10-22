@@ -87,8 +87,8 @@ class DynamicRolePermission(permissions.BasePermission):
             # Special handling for Package model
             elif hasattr(obj, "_meta") and obj._meta.model_name == "package":
                 # Check if user is union_head of any building associated with the package
-                from mkani.apps.packages.models import PackageBuilding
-                from mkani.apps.buildings.models import Building
+                from apps.packages.models import PackageBuilding
+                from apps.buildings.models import Building
                 building_ids = PackageBuilding.objects.filter(package=obj).values_list('building_id', flat=True)
                 return Building.objects.filter(id__in=building_ids, union_head=user).exists()
 

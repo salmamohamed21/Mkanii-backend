@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from django.db.models import Q
 from .models import Building
 from .serializers import BuildingSerializer
-from mkani.core.permissions import DynamicRolePermission
+from apps.core.permissions import DynamicRolePermission
 from apps.core.views import PublicAPIView
 
 

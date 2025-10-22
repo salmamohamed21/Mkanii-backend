@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from .models import Package, PackageBuilding, PackageInvoice
 from .serializers import PackageSerializer
 from apps.packages.tasks import generate_monthly_invoices
-from mkani.core.permissions import DynamicRolePermission
+from apps.core.permissions import DynamicRolePermission
 
 class PackageViewSet(viewsets.ModelViewSet):
     permission_classes = [DynamicRolePermission]

@@ -7,7 +7,7 @@ from .models import Wallet, WalletTransaction, SubscriptionPlan, UserSubscriptio
 from .serializers import WalletSerializer, WalletTransactionSerializer, SubscriptionPlanSerializer, UserSubscriptionSerializer, InvoiceSerializer, TransactionSerializer
 from .services.paymob_service import PaymobService
 from .services.sahel_service import SahelService
-from mkani.core.permissions import DynamicRolePermission
+from apps.core.permissions import DynamicRolePermission
 from apps.accounts.models import ResidentProfile
 
 class WalletViewSet(viewsets.ModelViewSet):
