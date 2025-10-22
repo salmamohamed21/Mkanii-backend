@@ -4,4 +4,5 @@
 - [x] Update Procfile with correct Gunicorn command to wsgi:application
 - [x] Verify wsgi.py is correct (already confirmed)
 - [x] Fix module import issues by adding sys.path in wsgi.py, asgi.py, and manage.py
+- [x] Fix drf-spectacular schema generation by adding DEFAULT_SCHEMA_CLASS
 - [ ] Test deployment on Railway
