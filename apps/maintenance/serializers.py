@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import MaintenanceRequest
-from mkani.apps.accounts.models import TechnicianProfile, ResidentProfile
-from mkani.apps.buildings.models import Building
+from apps.accounts.models import TechnicianProfile, ResidentProfile
+from apps.buildings.models import Building
 
 
 class MaintenanceRequestSerializer(serializers.ModelSerializer):

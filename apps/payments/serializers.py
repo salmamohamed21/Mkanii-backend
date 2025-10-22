@@ -11,7 +11,7 @@ class WalletSerializer(serializers.ModelSerializer):
 
     def get_owner(self, obj):
         if obj.owner_type == 'user':
-            from mkani.apps.accounts.models import User
+            from apps.accounts.models import User
             try:
                 user = User.objects.get(id=obj.owner_id)
                 return user.full_name

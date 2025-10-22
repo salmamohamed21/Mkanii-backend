@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
-from mkani.apps.accounts.models import User, Role, ResidentProfile, TechnicianProfile
-from mkani.apps.buildings.models import Building
+from apps.accounts.models import User, Role, ResidentProfile, TechnicianProfile
+from apps.buildings.models import Building
 
 
 class Command(BaseCommand):

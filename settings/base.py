@@ -28,13 +28,13 @@ INSTALLED_APPS = [
     'channels',
 
         # local apps
-        'mkani.apps.accounts',
-        'mkani.apps.buildings',
-        'mkani.apps.packages',
-        'mkani.apps.payments',
-        'mkani.apps.maintenance',
-        'mkani.apps.notifications',
-        'mkani.apps.core',
+        'apps.accounts',
+        'apps.buildings',
+        'apps.packages',
+        'apps.payments',
+        'apps.maintenance',
+        'apps.notifications',
+        'apps.core',
 ]
 
 MIDDLEWARE = [
@@ -47,13 +47,13 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'mkani.apps.accounts.middleware.AutoRefreshTokenMiddleware',
-    'mkani.middlewares.JWTAuthFromCookieMiddleware',
+    'apps.accounts.middleware.AutoRefreshTokenMiddleware',
+    'middlewares.JWTAuthFromCookieMiddleware',
 ]
 
-ROOT_URLCONF = 'mkani.urls'
-WSGI_APPLICATION = 'mkani.wsgi.application'
-ASGI_APPLICATION = 'mkani.asgi.application'
+ROOT_URLCONF = 'urls'
+WSGI_APPLICATION = 'wsgi.application'
+ASGI_APPLICATION = 'asgi.application'
 
 # Database (Postgres by default)
 DATABASES = {
@@ -70,7 +70,7 @@ DATABASES = {
 AUTH_USER_MODEL = 'accounts.User'
 
 AUTHENTICATION_BACKENDS = [
-    'mkani.apps.accounts.backends.EmailBackend',  # تسجيل الدخول بالإيميل
+    'apps.accounts.backends.EmailBackend',  # تسجيل الدخول بالإيميل
     'django.contrib.auth.backends.ModelBackend',  # الاحتياطي
 ]
 
@@ -106,7 +106,7 @@ TEMPLATES = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'mkani.apps.accounts.authentication.CookieJWTAuthentication',
+        'apps.accounts.authentication.CookieJWTAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }

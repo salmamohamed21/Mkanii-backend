@@ -9,8 +9,8 @@ from .serializers import (
     CreateMaintenanceRequestSerializer,
 )
 from .permissions import IsResident, IsTechnician, IsUnionHead
-from mkani.apps.notifications.models import Notification
-from mkani.apps.accounts.models import TechnicianProfile, ResidentProfile
+from apps.notifications.models import Notification
+from apps.accounts.models import TechnicianProfile, ResidentProfile
 
 # ==========================================================
 # 🔧 طلبات الصيانة

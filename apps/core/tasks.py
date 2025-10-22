@@ -1,8 +1,8 @@
 from datetime import date
 from django.utils import timezone
-from mkani.apps.packages.models import RecurringPackage, RecurringInstance
-from mkani.apps.payments.models import ResidentWallet, Transaction
-from mkani.apps.notifications.models import Notification
+from apps.packages.models import RecurringPackage, RecurringInstance
+from apps.payments.models import ResidentWallet, Transaction
+from apps.notifications.models import Notification
 from django.db import transaction as db_transaction
 from celery import shared_task
 

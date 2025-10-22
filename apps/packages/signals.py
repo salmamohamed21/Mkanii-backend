@@ -3,8 +3,8 @@ from django.dispatch import receiver
 from django.db import transaction as db_transaction
 from datetime import date
 from .models import Package, PackageBuilding, PackageInvoice
-from mkani.apps.payments.models import Wallet, Transaction, Invoice
-from mkani.apps.notifications.models import Notification
+from apps.payments.models import Wallet, Transaction, Invoice
+from apps.notifications.models import Notification
 
 
 @receiver(post_save, sender=Package)

@@ -2,5 +2,5 @@ from django.apps import AppConfig
 
 class MaintenanceConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "mkani.apps.maintenance"
+    name = "apps.maintenance"
     verbose_name = "Maintenance Management"

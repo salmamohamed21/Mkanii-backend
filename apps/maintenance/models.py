@@ -1,6 +1,6 @@
 from django.db import models
-from mkani.apps.accounts.models import TechnicianProfile, ResidentProfile
-from mkani.apps.buildings.models import Building
+from apps.accounts.models import TechnicianProfile, ResidentProfile
+from apps.buildings.models import Building
 
 class MaintenanceRequest(models.Model):
     building = models.ForeignKey(Building, on_delete=models.CASCADE)

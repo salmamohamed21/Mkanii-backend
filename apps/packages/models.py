@@ -1,5 +1,5 @@
 from django.db import models
-from mkani.apps.accounts.models import User
+from apps.accounts.models import User
 
 class Package(models.Model):
     PACKAGE_TYPES = [

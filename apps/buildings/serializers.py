@@ -16,8 +16,8 @@ class BuildingSerializer(serializers.ModelSerializer):
         ]
 
     def get_residents(self, obj):
-        from mkani.apps.accounts.models import ResidentProfile
-        from mkani.apps.packages.models import PackageInvoice
+        from apps.accounts.models import ResidentProfile
+        from apps.packages.models import PackageInvoice
 
         residents = ResidentProfile.objects.filter(building=obj).select_related('user')
         resident_data = []
@@ -47,11 +47,11 @@ class BuildingSerializer(serializers.ModelSerializer):
         return obj.union_head.full_name if getattr(obj, 'union_head', None) else None
 
     def get_packages_count(self, obj):
-        from mkani.apps.packages.models import PackageBuilding
+        from apps.packages.models import PackageBuilding
         return PackageBuilding.objects.filter(building=obj).count()
 
     def get_packages(self, obj):
-        from mkani.apps.packages.models import PackageBuilding, Package, PackageFixed, PackageUtility, PackagePrepaid, PackageMisc
+        from apps.packages.models import PackageBuilding, Package, PackageFixed, PackageUtility, PackagePrepaid, PackageMisc
         package_buildings = PackageBuilding.objects.filter(building=obj).select_related('package')
         packages_data = []
         for pb in package_buildings:

@@ -10,12 +10,12 @@ from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
 
-from mkani.apps.accounts.models import ResidentProfile
-from mkani.apps.buildings.models import Building
-from mkani.apps.packages.models import PackageBuilding, PackageInvoice, Package
-from mkani.apps.payments.models import Transaction
-from mkani.apps.maintenance.models import MaintenanceRequest
-from mkani.apps.notifications.models import Notification
+from apps.accounts.models import ResidentProfile
+from apps.buildings.models import Building
+from apps.packages.models import PackageBuilding, PackageInvoice, Package
+from apps.payments.models import Transaction
+from apps.maintenance.models import MaintenanceRequest
+from apps.notifications.models import Notification
 
 User = get_user_model()
 

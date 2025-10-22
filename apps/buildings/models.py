@@ -1,5 +1,5 @@
 from django.db import models
-from mkani.apps.accounts.models import User
+from apps.accounts.models import User
 
 class Building(models.Model):
     union_head = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='buildings')

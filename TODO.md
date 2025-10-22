@@ -1,7 +1,11 @@
-# TODO List for Fixing DJANGO_SETTINGS_MODULE
+# Fix Django Module Import Errors
 
-- [x] Edit wsgi.py to change 'mkani.settings' to 'settings'
-- [x] Edit asgi.py to change 'mkani.settings' to 'settings'
-- [x] Edit manage.py to change 'mkani.settings' to 'settings'
-- [x] Edit render.yaml to change 'gunicorn mkani.wsgi' to 'gunicorn wsgi:application'
-- [x] Verify the changes by checking the files or running Django commands
+## Tasks
+- [x] Update settings/base.py: Remove 'mkani.' prefix from INSTALLED_APPS, MIDDLEWARE, ROOT_URLCONF, WSGI_APPLICATION, ASGI_APPLICATION, AUTHENTICATION_BACKENDS
+- [x] Update urls.py: Change includes to 'apps.*.urls'
+- [x] Update asgi.py: Change import to 'apps.notifications.routing'
+- [x] Update wsgi.py: Set DJANGO_SETTINGS_MODULE to 'settings.base'
+- [x] Update manage.py: Set DJANGO_SETTINGS_MODULE to 'settings.base'
+- [x] Update Procfile: Add --bind 0.0.0.0:$PORT
+- [x] Test locally with `python manage.py runserver`
+- [ ] Commit and redeploy to Railway

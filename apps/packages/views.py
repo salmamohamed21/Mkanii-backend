@@ -6,7 +6,7 @@ from rest_framework.response import Response
 
 from .models import Package, PackageBuilding, PackageInvoice
 from .serializers import PackageSerializer
-from mkani.apps.packages.tasks import generate_monthly_invoices
+from apps.packages.tasks import generate_monthly_invoices
 from mkani.core.permissions import DynamicRolePermission
 
 class PackageViewSet(viewsets.ModelViewSet):
@@ -72,8 +72,8 @@ class PackageViewSet(viewsets.ModelViewSet):
 
     def _send_package_notification(self, package, action="created"):
         """إرسال إشعار لسكان العمارات ورئيس الاتحاد عند إضافة/تعديل/حذف باقة"""
-        from mkani.apps.notifications.models import Notification
-        from mkani.apps.accounts.models import ResidentProfile
+        from apps.notifications.models import Notification
+        from apps.accounts.models import ResidentProfile
 
         # الحصول على سكان العمارات المرتبطة
         package_buildings = PackageBuilding.objects.filter(package=package)

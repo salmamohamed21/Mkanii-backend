@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
-from mkani.apps.buildings.models import Building
-from mkani.apps.accounts.models import User
+from apps.buildings.models import Building
+from apps.accounts.models import User
 
 class Command(BaseCommand):
     help = 'Approve all pending buildings and set admin as union_head'

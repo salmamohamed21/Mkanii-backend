@@ -1,8 +1,8 @@
 from datetime import date
 from django.utils import timezone
-from mkani.apps.packages.models import Package, PackageBuilding, PackageInvoice
-from mkani.apps.payments.models import Wallet, Transaction, Invoice
-from mkani.apps.notifications.models import Notification
+from apps.packages.models import Package, PackageBuilding, PackageInvoice
+from apps.payments.models import Wallet, Transaction, Invoice
+from apps.notifications.models import Notification
 from django.db import transaction as db_transaction
 from celery import shared_task
 

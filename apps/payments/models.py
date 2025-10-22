@@ -1,5 +1,5 @@
 from django.db import models
-from mkani.apps.accounts.models import User
+from apps.accounts.models import User
 
 class Wallet(models.Model):
     owner_type = models.CharField(max_length=50)  # user | building | technician | union_head | company

@@ -8,7 +8,7 @@ from .serializers import WalletSerializer, WalletTransactionSerializer, Subscrip
 from .services.paymob_service import PaymobService
 from .services.sahel_service import SahelService
 from mkani.core.permissions import DynamicRolePermission
-from mkani.apps.accounts.models import ResidentProfile
+from apps.accounts.models import ResidentProfile
 
 class WalletViewSet(viewsets.ModelViewSet):
     permission_classes = [DynamicRolePermission]

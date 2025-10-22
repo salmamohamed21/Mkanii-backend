@@ -20,9 +20,9 @@ from ..serializers import (
     ResidentProfileSerializer,
     TechnicianProfileSerializer,
 )
-from mkani.apps.buildings.models import Building
-from mkani.apps.buildings.serializers import BuildingSerializer
-from mkani.apps.payments.models import Wallet
+from apps.buildings.models import Building
+from apps.buildings.serializers import BuildingSerializer
+from apps.payments.models import Wallet
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -333,7 +333,7 @@ def search_by_national_id(request, national_id):
 def get_resident_profile_data(request):
     try:
         resident_profile = ResidentProfile.objects.get(user=request.user)
-        from mkani.apps.packages.models import Package, PackageBuilding, PackageInvoice
+        from apps.packages.models import Package, PackageBuilding, PackageInvoice
 
         # الباقات المشتركة (من العمارة)
         building_packages = []
@@ -417,7 +417,7 @@ def get_technician_profile_data(request):
 @permission_classes([IsAuthenticated])
 def get_union_head_profile_data(request):
     try:
-        from mkani.apps.packages.models import Package, PackageBuilding, PackageInvoice
+        from apps.packages.models import Package, PackageBuilding, PackageInvoice
 
         # الحصول على العمارات الخاصة برئيس الاتحاد
         user_buildings = Building.objects.filter(union_head=request.user)

@@ -8,7 +8,7 @@ from django.db.models import Q
 from .models import Building
 from .serializers import BuildingSerializer
 from mkani.core.permissions import DynamicRolePermission
-from mkani.apps.core.views import PublicAPIView
+from apps.core.views import PublicAPIView
 
 
 
@@ -48,7 +48,7 @@ class BuildingViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], permission_classes=[DynamicRolePermission])
     def residents_requests(self, request, pk=None):
         building = self.get_object()
-        from mkani.apps.accounts.models import ResidentProfile
+        from apps.accounts.models import ResidentProfile
         requests = ResidentProfile.objects.filter(building=building, status='pending')
         data = list(requests.values('id', 'user__full_name', 'floor_number', 'apartment_number', 'resident_type', 'created_at'))
         return Response(data)
@@ -60,8 +60,8 @@ class BuildingViewSet(viewsets.ModelViewSet):
         action = request.data.get('action')
         rejection_reason = request.data.get('rejectionReason')
         try:
-            from mkani.apps.accounts.models import ResidentProfile
-            from mkani.apps.notifications.models import Notification
+            from apps.accounts.models import ResidentProfile
+            from apps.notifications.models import Notification
             from django.utils import timezone
             resident_profile = ResidentProfile.objects.get(id=request_id, building=building, status='pending')
             if action == 'accept':
@@ -99,10 +99,10 @@ class BuildingViewSet(viewsets.ModelViewSet):
             return Response({'error': 'resident_id parameter required'}, status=400)
 
         try:
-            from mkani.apps.accounts.models import ResidentProfile
+            from apps.accounts.models import ResidentProfile
             resident = ResidentProfile.objects.get(id=resident_id, building=building)
             # Get payment history
-            from mkani.apps.packages.models import PackageInvoice
+            from apps.packages.models import PackageInvoice
             payments = PackageInvoice.objects.filter(
                 resident=resident
             ).select_related('package').values(
@@ -170,8 +170,8 @@ class BuildingViewSet(viewsets.ModelViewSet):
         if building.union_head != request.user:
             return Response({'error': 'Access denied. Only the union head can view residents.'}, status=403)
 
-        from mkani.apps.accounts.models import ResidentProfile
-        from mkani.apps.packages.models import PackageInvoice
+        from apps.accounts.models import ResidentProfile
+        from apps.packages.models import PackageInvoice
 
         residents = ResidentProfile.objects.filter(
             building=building,
@@ -208,7 +208,7 @@ class BuildingViewSet(viewsets.ModelViewSet):
         Get the building details for the current resident user.
         """
         try:
-            from mkani.apps.accounts.models import ResidentProfile
+            from apps.accounts.models import ResidentProfile
             resident_profile = ResidentProfile.objects.get(user=request.user)
             building = resident_profile.building
             serializer = self.get_serializer(building)

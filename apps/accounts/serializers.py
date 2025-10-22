@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinLengthValidator, RegexValidator
 from django.core.exceptions import ValidationError
 from .models import ResidentProfile, TechnicianProfile, TechnicianSchedule, Role
-from mkani.apps.buildings.models import Building
+from apps.buildings.models import Building
 import logging
 
 User = get_user_model()

@@ -2,14 +2,14 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import date, timedelta
 import random
-from mkani.apps.accounts.models import User, ResidentProfile, TechnicianProfile
-from mkani.apps.buildings.models import Building
-from mkani.apps.packages.models import (
+from apps.accounts.models import User, ResidentProfile, TechnicianProfile
+from apps.buildings.models import Building
+from apps.packages.models import (
     Package, PackageUtility, PackagePrepaid, PackageFixed, PackageMisc,
     PackageBuilding, PackageInvoice
 )
-from mkani.apps.payments.models import Wallet, WalletTransaction, Invoice, Transaction
-from mkani.apps.maintenance.models import MaintenanceRequest, MaintenanceInvoice
+from apps.payments.models import Wallet, WalletTransaction, Invoice, Transaction
+from apps.maintenance.models import MaintenanceRequest, MaintenanceInvoice
 
 
 class Command(BaseCommand):

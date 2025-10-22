@@ -1,5 +1,5 @@
 from django.db import models
-from mkani.apps.accounts.models import User
+from apps.accounts.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from asgiref.sync import async_to_sync
