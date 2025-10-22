@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Notification
 from .serializers import NotificationSerializer
-from mkani.core.permissions import DynamicRolePermission
+from apps.core.permissions import DynamicRolePermission
 
 class NotificationViewSet(viewsets.ModelViewSet):
     permission_classes = [DynamicRolePermission]
