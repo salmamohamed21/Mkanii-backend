@@ -6,5 +6,5 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from django.core.wsgi import get_wsgi_application
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.base')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings.prod')
 application = get_wsgi_application()
