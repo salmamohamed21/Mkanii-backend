@@ -9,7 +9,7 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'replace-me-in-prod')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 #ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*' , '.railway.app']
 
 INSTALLED_APPS = [
     'django_filters',
@@ -173,6 +173,9 @@ SPECTACULAR_SETTINGS = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'https://mkani-frontend.vercel.app/',
+    'https://terrific-success-production.up.railway.app',
+    'https://mkani-production.up.railway.app',
 ]
 
 # Allow all origins for development (can be restricted in production)
@@ -202,4 +205,6 @@ CSRF_COOKIE_SAMESITE = 'None'
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://terrific-success-production.up.railway.app",
+    "https://mkani-production.up.railway.app",
 ]
