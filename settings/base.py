@@ -180,8 +180,8 @@ CORS_ALLOWED_ORIGINS = [
     'https://mkani-production.up.railway.app',
 ]
 
-# Allow all origins for development (can be restricted in production)
-CORS_ALLOW_ALL_ORIGINS = True
+# Allow specific origins only (required for cookies to work with cross-site requests)
+CORS_ALLOW_ALL_ORIGINS = False
 
 # Allow credentials (cookies, authorization headers)
 CORS_ALLOW_CREDENTIALS = True
