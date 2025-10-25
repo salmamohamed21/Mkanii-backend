@@ -173,7 +173,7 @@ SPECTACULAR_SETTINGS = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
-    'https://mkani-frontend.vercel.app/',
+    'https://mkani-frontend.vercel.app',
     'https://terrific-success-production.up.railway.app',
     'https://mkani-production.up.railway.app',
 ]
