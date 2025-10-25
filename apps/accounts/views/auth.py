@@ -147,8 +147,8 @@ class LoginView(APIView):
         response = Response({"message": "تم تسجيل الدخول بنجاح"})
 
         # تخزين التوكينات داخل الكوكيز
-        response.set_cookie("access_token", str(refresh.access_token), httponly=True, samesite="Lax")
-        response.set_cookie("refresh_token", str(refresh), httponly=True, samesite="Lax")
+        response.set_cookie("access_token", str(refresh.access_token), httponly=True, samesite="None", secure=True)
+        response.set_cookie("refresh_token", str(refresh), httponly=True, samesite="None", secure=True)
         return response
 
 
