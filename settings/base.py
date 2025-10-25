@@ -174,7 +174,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'https://mkani-frontend.vercel.app',
-    'https://mkani-frontend-8bldzhixf-salma-mohameds-projects-3db72cdf.vercel.app',
+    'https://mkani-frontend-r8iipcgi8-salma-mohameds-projects-3db72cdf.vercel.app',
     'https://terrific-success-production.up.railway.app',
     'https://mkani-production.up.railway.app',
 ]
@@ -206,7 +206,7 @@ CSRF_COOKIE_SAMESITE = 'None'
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://mkani-frontend-8bldzhixf-salma-mohameds-projects-3db72cdf.vercel.app",
+    "https://mkani-frontend-r8iipcgi8-salma-mohameds-projects-3db72cdf.vercel.app",
     "https://terrific-success-production.up.railway.app",
     "https://mkani-production.up.railway.app",
 ]
