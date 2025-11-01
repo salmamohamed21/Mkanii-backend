@@ -2,14 +2,14 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import date, timedelta
 import random
-from apps.accounts.models import User, ResidentProfile, TechnicianProfile
+from apps.accounts.models import User, ResidentProfile
 from apps.buildings.models import Building
 from apps.packages.models import (
     Package, PackageUtility, PackagePrepaid, PackageFixed, PackageMisc,
     PackageBuilding, PackageInvoice
 )
 from apps.payments.models import Wallet, WalletTransaction, Invoice, Transaction
-from apps.maintenance.models import MaintenanceRequest, MaintenanceInvoice
+
 
 
 class Command(BaseCommand):
@@ -22,7 +22,7 @@ class Command(BaseCommand):
         users = list(User.objects.all())
         buildings = list(Building.objects.all())
         residents = list(ResidentProfile.objects.filter(status='accepted'))
-        technicians = list(TechnicianProfile.objects.all())
+        technicians = []
 
         if not users or not buildings:
             self.stdout.write(self.style.ERROR('No users or buildings found. Please create some first.'))
@@ -194,25 +194,7 @@ class Command(BaseCommand):
                     wallet.current_balance += amount
                     wallet.save()
 
-        # Create wallets for technicians
-        for tech in technicians:
-            wallet, created = Wallet.objects.get_or_create(
-                owner_type='technician',
-                owner_id=tech.id,
-                defaults={'current_balance': random.uniform(0, 2000)}
-            )
-            if created:
-                for _ in range(random.randint(2, 8)):
-                    amount = random.uniform(-200, 200)
-                    transaction_type = 'credit' if amount > 0 else 'debit'
-                    WalletTransaction.objects.create(
-                        wallet=wallet,
-                        amount=abs(amount),
-                        transaction_type=transaction_type,
-                        description=f'Technician {transaction_type} transaction'
-                    )
-                    wallet.current_balance += amount
-                    wallet.save()
+        # Technicians removed, no wallets to create
 
         # Create some invoices and transactions
         wallets = list(Wallet.objects.all())

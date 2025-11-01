@@ -5,8 +5,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db.models import Q
-from .models import Building
-from .serializers import BuildingSerializer
+from .models import Building, Unit
+from .serializers import BuildingSerializer, UnitSerializer
 from apps.core.permissions import DynamicRolePermission
 from apps.core.views import PublicAPIView
 
@@ -231,6 +231,29 @@ class PublicBuildingNamesView(PublicAPIView):
         buildings = Building.objects.filter(approval_status='approved')
         data = list(buildings.values('id', 'name', 'address'))
         return Response(data)
+
+
+class UnitViewSet(viewsets.ModelViewSet):
+    permission_classes = [DynamicRolePermission]
+    queryset = Unit.objects.all().order_by('id')
+    serializer_class = UnitSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['apartment_number', 'building__name']
+    ordering_fields = ['floor_number', 'apartment_number']
+
+    def get_queryset(self):
+        roles = getattr(self.request.user, 'roles', None)
+        if hasattr(roles, 'all'):
+            role_names = [r.name for r in roles.all()]
+        else:
+            role_names = []
+
+        if 'union_head' in role_names:
+            return Unit.objects.filter(building__union_head=self.request.user).order_by('created_at')
+        return Unit.objects.all().order_by('created_at')
+
+    def perform_create(self, serializer):
+        serializer.save()
 
 
 class PublicBuildingsListView(PublicAPIView):

@@ -9,12 +9,10 @@ from django.db.models import Sum, Count
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
-
 from apps.accounts.models import ResidentProfile
 from apps.buildings.models import Building
 from apps.packages.models import PackageBuilding, PackageInvoice, Package
 from apps.payments.models import Transaction
-from apps.maintenance.models import MaintenanceRequest
 from apps.notifications.models import Notification
 
 User = get_user_model()
@@ -81,11 +79,8 @@ def dashboard_stats(request):
         status='completed'
     ).aggregate(total=Sum('amount'))['total'] or 0
 
-    # Pending maintenance requests
-    pending_maintenance = MaintenanceRequest.objects.filter(
-        building__in=buildings,
-        status='pending'
-    ).count()
+    # Pending maintenance requests - temporarily set to 0 since maintenance app is removed
+    pending_maintenance = 0
 
     return Response({
         'totalBuildings': total_buildings,
@@ -136,32 +131,7 @@ def latest_activities(request):
             'color': 'green'
         })
 
-    # Recent maintenance requests
-    recent_maintenance = MaintenanceRequest.objects.filter(
-        building__in=buildings
-    ).select_related('building', 'resident').order_by('-created_at')[:5]
-
-    for maintenance in recent_maintenance:
-        if maintenance.status == 'pending':
-            activities.append({
-                'id': f'maintenance_{maintenance.id}',
-                'type': 'maintenance',
-                'title': f'طلب صيانة جديد - {maintenance.building.name}',
-                'description': maintenance.description,
-                'timestamp': maintenance.created_at,
-                'icon': 'FaTools',
-                'color': 'orange'
-            })
-        elif maintenance.status == 'completed':
-            activities.append({
-                'id': f'maintenance_completed_{maintenance.id}',
-                'type': 'maintenance_completed',
-                'title': f'تم إنجاز طلب صيانة - {maintenance.building.name}',
-                'description': maintenance.description,
-                'timestamp': maintenance.updated_at,
-                'icon': 'FaCheckCircle',
-                'color': 'green'
-            })
+    # Maintenance requests removed - no activities to add
 
     # Recent resident registrations
     recent_residents = ResidentProfile.objects.filter(

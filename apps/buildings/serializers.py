@@ -1,5 +1,30 @@
 from rest_framework import serializers
-from .models import Building
+from .models import Building, Unit
+
+class UnitSerializer(serializers.ModelSerializer):
+    building_name = serializers.CharField(source='building.name', read_only=True)
+
+    class Meta:
+        model = Unit
+        fields = [
+            'id', 'building', 'building_name', 'floor_number', 'apartment_number',
+            'area', 'rooms_count', 'status', 'created_at', 'updated_at'
+        ]
+
+    def create(self, validated_data):
+        # Auto-create ResidentProfile for owner when unit is created
+        unit = super().create(validated_data)
+        from apps.accounts.models import ResidentProfile
+        ResidentProfile.objects.create(
+            user=self.context['request'].user,
+            unit=unit,
+            resident_type='owner',
+            area=unit.area,
+            rooms_count=unit.rooms_count,
+            status='approved',
+            is_present=True
+        )
+        return unit
 
 class BuildingSerializer(serializers.ModelSerializer):
     residents = serializers.SerializerMethodField()

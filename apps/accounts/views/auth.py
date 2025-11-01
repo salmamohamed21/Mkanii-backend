@@ -3,7 +3,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.mail import send_mail
@@ -14,11 +14,10 @@ from django.contrib.auth.hashers import make_password
 
 from django.conf import settings
 
-from ..models import User, ResidentProfile, TechnicianProfile, Role, PasswordResetCode
+from ..models import User, ResidentProfile, Role, PasswordResetCode
 from ..serializers import (
     UserSerializer,
     ResidentProfileSerializer,
-    TechnicianProfileSerializer,
 )
 from apps.buildings.models import Building
 from apps.buildings.serializers import BuildingSerializer
@@ -106,7 +105,12 @@ class RegisterView(generics.CreateAPIView):
                 floor_number=data.get('floor_number'),
                 apartment_number=data.get('apartment_number'),
                 resident_type=data.get('resident_type', 'owner'),
+                area=data.get('area') if data.get('resident_type') == 'owner' else None,
+                rooms_count=data.get('rooms_count') if data.get('resident_type') == 'owner' else None,
                 owner_national_id=data.get('owner_national_id') if data.get('resident_type') == 'tenant' else None,
+                rental_duration=data.get('rental_duration') if data.get('resident_type') == 'tenant' else None,
+                rental_start_date=data.get('rental_start_date') if data.get('resident_type') == 'tenant' else None,
+                rental_value=data.get('rental_value') if data.get('resident_type') == 'tenant' else None,
                 manual_building_name=data.get('manual_building_name'),
                 manual_address=data.get('manual_address'),
             )
@@ -114,22 +118,7 @@ class RegisterView(generics.CreateAPIView):
             # إنشاء محفظة للساكن
             Wallet.objects.create(owner_type='user', owner_id=user.id, current_balance=0)
 
-        # --------------------------------------
-        # 🔧 إذا كان المستخدم فني (technician)
-        # --------------------------------------
-        if 'technician' in role_names:
-            logger.info(f"Creating technician profile for user {user.id}")
-            TechnicianProfile.objects.create(
-                user=user,
-                specialization=data.get('specialization'),
-                work_area=data.get('work_area'),
-                employment_status=data.get('employment_status'),
-                services_description=data.get('services_description', ''),
-                rate=data.get('rate', 0),
-            )
 
-            # إنشاء محفظة للفني
-            Wallet.objects.create(owner_type='user', owner_id=user.id, current_balance=0)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -301,11 +290,143 @@ class ResidentProfileViewSet(viewsets.ModelViewSet):
     serializer_class = ResidentProfileSerializer
     permission_classes = [IsAuthenticated]
 
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def submit_rental_request(self, request):
+        """
+        Endpoint for tenant to submit rental request.
+        Creates ResidentProfile as tenant with 'pending' status.
+        """
+        data = request.data.copy()
+        data['user'] = request.user.id
+        data['resident_type'] = 'tenant'
+        data['status'] = 'pending'
 
-class TechnicianProfileViewSet(viewsets.ModelViewSet):
-    queryset = TechnicianProfile.objects.all()
-    serializer_class = TechnicianProfileSerializer
-    permission_classes = [IsAuthenticated]
+        # Validate required fields
+        required_fields = ['unit', 'rental_duration', 'rental_start_date', 'rental_value']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        if missing_fields:
+            return Response(
+                {"error": f"الحقول التالية مطلوبة: {', '.join(missing_fields)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if unit exists and is available
+        from apps.buildings.models import Unit
+        try:
+            unit = Unit.objects.get(id=data['unit'], status='available')
+        except Unit.DoesNotExist:
+            return Response(
+                {"error": "الوحدة غير متوفرة أو غير موجودة"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if user already has a pending request for this unit
+        existing_request = ResidentProfile.objects.filter(
+            user=request.user,
+            unit=unit,
+            resident_type='tenant',
+            status__in=['pending', 'approved']
+        ).exists()
+        if existing_request:
+            return Response(
+                {"error": "لديك طلب إيجار معلق أو معتمد بالفعل لهذه الوحدة"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        resident_profile = serializer.save()
+
+        return Response({
+            "message": "تم إرسال طلب الإيجار بنجاح",
+            "data": serializer.data
+        }, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def approve_rental_request(self, request, pk=None):
+        """
+        Endpoint for owner to approve tenant rental request.
+        Updates tenant status to 'approved', sets unit.status='occupied'.
+        """
+        resident_profile = self.get_object()
+
+        # Check if user is the owner of the unit
+        if resident_profile.unit.building.union_head != request.user:
+            return Response(
+                {"error": "ليس لديك صلاحية الموافقة على هذا الطلب"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if resident_profile.resident_type != 'tenant' or resident_profile.status != 'pending':
+            return Response(
+                {"error": "هذا الطلب غير صالح للموافقة"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update resident profile status
+        resident_profile.status = 'approved'
+        resident_profile.is_present = True
+        resident_profile.save()
+
+        # Update unit status
+        resident_profile.unit.status = 'occupied'
+        resident_profile.unit.save()
+
+        # Send notification to tenant
+        from apps.notifications.models import Notification
+        Notification.objects.create(
+            user=resident_profile.user,
+            title="تمت الموافقة على طلب الإيجار",
+            message=f"تمت الموافقة على طلب إيجار الوحدة {resident_profile.unit.apartment_number} في العمارة {resident_profile.unit.building.name}"
+        )
+
+        return Response({
+            "message": "تمت الموافقة على طلب الإيجار بنجاح"
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def reject_rental_request(self, request, pk=None):
+        """
+        Endpoint for owner to reject tenant rental request.
+        """
+        resident_profile = self.get_object()
+        rejection_reason = request.data.get('rejection_reason', '')
+
+        # Check if user is the owner of the unit
+        if resident_profile.unit.building.union_head != request.user:
+            return Response(
+                {"error": "ليس لديك صلاحية رفض هذا الطلب"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if resident_profile.resident_type != 'tenant' or resident_profile.status != 'pending':
+            return Response(
+                {"error": "هذا الطلب غير صالح للرفض"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update resident profile status
+        resident_profile.status = 'rejected'
+        resident_profile.save()
+
+        # Send notification to tenant
+        from apps.notifications.models import Notification
+        message = f"تم رفض طلب إيجار الوحدة {resident_profile.unit.apartment_number} في العمارة {resident_profile.unit.building.name}"
+        if rejection_reason:
+            message += f". السبب: {rejection_reason}"
+
+        Notification.objects.create(
+            user=resident_profile.user,
+            title="تم رفض طلب الإيجار",
+            message=message
+        )
+
+        return Response({
+            "message": "تم رفض طلب الإيجار"
+        }, status=status.HTTP_200_OK)
+
+
+
 
 
 # ============================
@@ -391,23 +512,7 @@ def get_resident_profile_data(request):
         return Response({"detail": "Resident profile not found"}, status=404)
 
 
-# ============================
-# 🔹 TECHNICIAN PROFILE DATA
-# ============================
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_technician_profile_data(request):
-    try:
-        technician_profile = TechnicianProfile.objects.get(user=request.user)
-        return Response({
-            'specialization': technician_profile.specialization,
-            'work_area': technician_profile.work_area,
-            'employment_status': technician_profile.employment_status,
-            'services_description': technician_profile.services_description,
-            'rate': technician_profile.rate,
-        })
-    except TechnicianProfile.DoesNotExist:
-        return Response({"detail": "Technician profile not found"}, status=404)
+
 
 
 # ============================

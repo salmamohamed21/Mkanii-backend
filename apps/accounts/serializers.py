@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.core.validators import MinLengthValidator, RegexValidator
 from django.core.exceptions import ValidationError
-from .models import ResidentProfile, TechnicianProfile, TechnicianSchedule, Role
+from .models import ResidentProfile, Role
 from apps.buildings.models import Building
 import logging
 
@@ -77,9 +77,6 @@ class UserSerializer(serializers.ModelSerializer):
         if ResidentProfile.objects.filter(user=obj).exists():
             if 'resident' not in assigned_roles:
                 assigned_roles.append('resident')
-        if TechnicianProfile.objects.filter(user=obj).exists():
-            if 'technician' not in assigned_roles:
-                assigned_roles.append('technician')
         if Building.objects.filter(union_head=obj).exists():
             if 'union_head' not in assigned_roles:
                 assigned_roles.append('union_head')
@@ -93,6 +90,7 @@ class UserSerializer(serializers.ModelSerializer):
 class ResidentProfileSerializer(serializers.ModelSerializer):
     building_name = serializers.SerializerMethodField()
     address = serializers.SerializerMethodField()
+    unit_details = serializers.SerializerMethodField()
 
     class Meta:
         model = ResidentProfile
@@ -108,14 +106,17 @@ class ResidentProfileSerializer(serializers.ModelSerializer):
             return obj.building.address
         return obj.manual_address
 
+    def get_unit_details(self, obj):
+        if obj.unit:
+            return {
+                'id': obj.unit.id,
+                'floor_number': obj.unit.floor_number,
+                'apartment_number': obj.unit.apartment_number,
+                'area': obj.unit.area,
+                'rooms_count': obj.unit.rooms_count,
+                'status': obj.unit.status,
+            }
+        return None
 
-class TechnicianProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TechnicianProfile
-        fields = "__all__"
 
 
-class TechnicianScheduleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TechnicianSchedule
-        fields = "__all__"
