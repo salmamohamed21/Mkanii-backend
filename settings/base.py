@@ -58,17 +58,8 @@ import dj_database_url
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}",
-        conn_max_age=600,
-        ssl_require=True
-    ) if os.getenv('DATABASE_URL') else {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME', 'mkani_db'),
-        'USER': os.getenv('DB_USER', 'postgres'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'mosa$555#Mo'),
-        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-    }
+        default='postgresql://postgres:WMDzHkuQvvZsplfuZcLPPnDQOVqBUurp@centerbeam.proxy.rlwy.net:45970/railway'
+    )
 }
 
 AUTH_USER_MODEL = 'accounts.User'

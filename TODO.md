@@ -1,5 +1,4 @@
-- [x] Remove UserDocument class from apps/accounts/models.py
-- [x] Delete apps/accounts/migrations/0001_initial.py
-- [x] Delete apps/accounts/migrations/0002_initial.py
-- [x] Run python manage.py makemigrations accounts
-- [x] Run python manage.py migrate
+# TODO List for Database Configuration Update
+
+- [x] Update DATABASES configuration in settings/base.py to use hardcoded Railway PostgreSQL URL
+- [x] Verify the change is applied correctly
