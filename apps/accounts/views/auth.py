@@ -36,7 +36,13 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        data = request.data.copy()
+        # استخراج البيانات من FormData
+        data = {}
+        for key, value in request.data.items():
+            if hasattr(value, 'read'):  # ملف
+                data[key] = value
+            else:
+                data[key] = value
 
         # تحويل الأدوار إلى list من strings
         if 'roles' in data:
@@ -99,26 +105,92 @@ class RegisterView(generics.CreateAPIView):
         # --------------------------------------
         if 'resident' in role_names:
             logger.info(f"Creating resident profile for user {user.id}")
-            ResidentProfile.objects.create(
-                user=user,
-                building_id=data.get('building_id') if data.get('building_id') else None,
-                floor_number=data.get('floor_number'),
-                apartment_number=data.get('apartment_number'),
-                resident_type=data.get('resident_type', 'owner'),
-                area=data.get('area') if data.get('resident_type') == 'owner' else None,
-                rooms_count=data.get('rooms_count') if data.get('resident_type') == 'owner' else None,
-                owner_national_id=data.get('owner_national_id') if data.get('resident_type') == 'tenant' else None,
-                rental_duration=data.get('rental_duration') if data.get('resident_type') == 'tenant' else None,
-                rental_start_date=data.get('rental_start_date') if data.get('resident_type') == 'tenant' else None,
-                rental_value=data.get('rental_value') if data.get('resident_type') == 'tenant' else None,
-                manual_building_name=data.get('manual_building_name'),
-                manual_address=data.get('manual_address'),
-            )
+            resident_type = data.get('resident_type', 'owner')
+            floor_number = data.get('floor_number')
+            apartment_number = data.get('apartment_number')
+            building_id = data.get('building_id')
+            building_name = data.get('building_name')
+            address = data.get('address')
+
+            # إنشاء أو الحصول على العمارة إذا لم يكن building_id موجوداً
+            building = None
+            if building_id:
+                try:
+                    building = Building.objects.get(id=building_id)
+                except Building.DoesNotExist:
+                    return Response(
+                        {"error": "العمارة المحددة غير موجودة"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+            elif building_name and address:
+                # إنشاء عمارة جديدة إذا لم تكن موجودة
+                building, created = Building.objects.get_or_create(
+                    name=building_name,
+                    address=address,
+                    defaults={
+                        'total_units': 1,  # قيمة افتراضية
+                        'total_floors': 1,
+                        'units_per_floor': 1,
+                        'subscription_plan': 'basic',
+                    }
+                )
+
+            # إنشاء أو الحصول على الوحدة
+            unit = None
+            if building and floor_number and apartment_number:
+                unit, created = Unit.objects.get_or_create(
+                    building=building,
+                    floor_number=floor_number,
+                    apartment_number=apartment_number,
+                    defaults={
+                        'area': data.get('area') if resident_type == 'owner' else None,
+                        'rooms_count': data.get('rooms_count') if resident_type == 'owner' else None,
+                        'status': 'available',
+                    }
+                )
+                # تحديث البيانات إذا كانت موجودة
+                if resident_type == 'owner':
+                    unit.area = data.get('area')
+                    unit.rooms_count = data.get('rooms_count')
+                    unit.save()
+
+            # إنشاء ResidentProfile
+            resident_profile_data = {
+                'user': user,
+                'unit': unit,
+                'resident_type': resident_type,
+                'status': 'active',
+                'is_present': True,
+            }
+
+            # إضافة البيانات المشتركة
+            if not unit:
+                resident_profile_data.update({
+                    'manual_building_name': building_name,
+                    'manual_address': address,
+                    'floor_number': floor_number,
+                    'apartment_number': apartment_number,
+                })
+
+            if resident_type == 'tenant':
+                resident_profile_data.update({
+                    'owner_national_id': data.get('owner_national_id'),
+                    'rental_start_date': data.get('rental_start_date'),
+                    'rental_end_date': data.get('rental_end_date'),
+                    'rental_value': data.get('rental_value'),
+                })
+                # البحث عن المالك إذا كان owner_national_id موجوداً
+                if data.get('owner_national_id'):
+                    try:
+                        owner = User.objects.get(national_id=data.get('owner_national_id'))
+                        resident_profile_data['owner'] = owner
+                    except User.DoesNotExist:
+                        pass  # يمكن تجاهل إذا لم يكن المالك موجوداً
+
+            ResidentProfile.objects.create(**resident_profile_data)
 
             # إنشاء محفظة للساكن
             Wallet.objects.create(owner_type='user', owner_id=user.id, current_balance=0)
-
-
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

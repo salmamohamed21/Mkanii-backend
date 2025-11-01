@@ -41,20 +41,26 @@ class UserRole(models.Model):
 
 class ResidentProfile(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    unit = models.ForeignKey('buildings.Unit', on_delete=models.CASCADE)
+    unit = models.ForeignKey('buildings.Unit', on_delete=models.CASCADE, null=True, blank=True)
     resident_type = models.CharField(max_length=20, default='owner')  # owner or tenant
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='tenants')  # المالك للمستأجر
     area = models.FloatField(null=True, blank=True)  # مساحة الشقة بالمتر المربع
     rooms_count = models.PositiveIntegerField(null=True, blank=True)  # عدد الغرف في الشقة
     rental_start_date = models.DateField(null=True, blank=True)
     rental_end_date = models.DateField(null=True, blank=True)
     rental_value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    status = models.CharField(max_length=20, default='pending')  # pending, approved, rejected, inactive
+    status = models.CharField(max_length=20, default='active')  # pending, approved, rejected, inactive
     is_present = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # حقل إضافي للمستأجرين
+    owner_national_id = models.CharField(max_length=20, null=True, blank=True)  # رقم الهوية الوطنية للمالك
+
     def __str__(self):
-        return f"{self.user.full_name} - {self.unit}"
+        if self.unit:
+            return f"{self.user.full_name} - {self.unit}"
+        return f"{self.user.full_name} - No Building"
 
 
 

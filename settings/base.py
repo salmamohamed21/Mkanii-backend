@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
@@ -54,11 +55,9 @@ ROOT_URLCONF = 'urls'
 WSGI_APPLICATION = 'wsgi.application'
 ASGI_APPLICATION = 'asgi.application'
 
-import dj_database_url
-
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgresql://postgres:WMDzHkuQvvZsplfuZcLPPnDQOVqBUurp@centerbeam.proxy.rlwy.net:45970/railway'
+        default=os.getenv('DATABASE_URL')
     )
 }
 
