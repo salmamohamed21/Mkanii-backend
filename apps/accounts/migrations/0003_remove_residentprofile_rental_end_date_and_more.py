@@ -10,9 +10,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='residentprofile',
-            name='rental_end_date',
+        migrations.RunSQL(
+            "ALTER TABLE accounts_residentprofile DROP COLUMN IF EXISTS rental_end_date;",
+            reverse_sql="ALTER TABLE accounts_residentprofile ADD COLUMN rental_end_date DATE NULL;",
         ),
         migrations.AddField(
             model_name='residentprofile',
