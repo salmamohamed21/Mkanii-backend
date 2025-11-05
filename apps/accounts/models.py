@@ -65,6 +65,27 @@ class ResidentProfile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Properties to access unit fields for backward compatibility
+    @property
+    def floor_number(self):
+        return self.unit.floor_number if self.unit else None
+
+    @property
+    def apartment_number(self):
+        return self.unit.apartment_number if self.unit else None
+
+    @property
+    def building(self):
+        return self.unit.building if self.unit else None
+
+    @property
+    def manual_building_name(self):
+        return None  # Not used anymore
+
+    @property
+    def manual_address(self):
+        return None  # Not used anymore
+
     def __str__(self):
         if self.unit:
             return f"{self.user.full_name} - {self.unit}"
