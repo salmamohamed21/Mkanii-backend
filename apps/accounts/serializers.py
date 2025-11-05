@@ -62,16 +62,19 @@ class UserSerializer(serializers.ModelSerializer):
             roles.append(role)
             if created:
                 logger.info(f"Created new role: {role_name}")
-        user.roles.set(roles)
+        # Use userrole_set to set roles
+        user.userrole_set.all().delete()  # Clear existing roles
+        for role in roles:
+            user.userrole_set.create(role=role)
         logger.info(f"Assigned roles to user {user.id}: {[r.name for r in roles]}")
         # Verify roles are set
-        assigned = user.roles.all()
+        assigned = [ur.role for ur in user.userrole_set.all()]
         logger.info(f"Verified assigned roles: {[r.name for r in assigned]}")
         return user
 
     def get_roles(self, obj):
-        # Get roles from ManyToManyField
-        assigned_roles = [role.name for role in obj.roles.all()]
+        # Get roles from userrole_set
+        assigned_roles = [ur.role.name for ur in obj.userrole_set.all()]
 
         # Check for implied roles based on profiles
         if ResidentProfile.objects.filter(user=obj).exists():
