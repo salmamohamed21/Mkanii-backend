@@ -112,6 +112,24 @@ class RegisterView(generics.CreateAPIView):
             building_name = data.get('building_name')
             address = data.get('address')
 
+            # التحقق من الحقول المطلوبة حسب نوع الساكن
+            if resident_type == 'owner':
+                required_fields = ['area', 'rooms_count']
+                missing_fields = [field for field in required_fields if not data.get(field)]
+                if missing_fields:
+                    return Response(
+                        {"error": f"الحقول التالية مطلوبة للمالك: {', '.join(missing_fields)}"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+            elif resident_type == 'tenant':
+                required_fields = ['owner_national_id', 'rental_start_date', 'rental_end_date', 'rental_value']
+                missing_fields = [field for field in required_fields if not data.get(field)]
+                if missing_fields:
+                    return Response(
+                        {"error": f"الحقول التالية مطلوبة للمستأجر: {', '.join(missing_fields)}"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
             # إنشاء أو الحصول على العمارة إذا لم يكن building_id موجوداً
             building = None
             if building_id:
@@ -172,20 +190,29 @@ class RegisterView(generics.CreateAPIView):
                     'apartment_number': apartment_number,
                 })
 
-            if resident_type == 'tenant':
+            if resident_type == 'owner':
+                # إضافة area و rooms_count للمالك
                 resident_profile_data.update({
-                    'owner_national_id': data.get('owner_national_id'),
+                    'area': data.get('area'),
+                    'rooms_count': data.get('rooms_count'),
+                })
+            elif resident_type == 'tenant':
+                # البحث عن المالك باستخدام national_id
+                owner_national_id = data.get('owner_national_id')
+                try:
+                    owner = User.objects.get(national_id=owner_national_id)
+                    resident_profile_data['owner'] = owner
+                except User.DoesNotExist:
+                    return Response(
+                        {"error": "الرقم الوطني للمالك غير صحيح أو غير موجود"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                resident_profile_data.update({
                     'rental_start_date': data.get('rental_start_date'),
                     'rental_end_date': data.get('rental_end_date'),
                     'rental_value': data.get('rental_value'),
                 })
-                # البحث عن المالك إذا كان owner_national_id موجوداً
-                if data.get('owner_national_id'):
-                    try:
-                        owner = User.objects.get(national_id=data.get('owner_national_id'))
-                        resident_profile_data['owner'] = owner
-                    except User.DoesNotExist:
-                        pass  # يمكن تجاهل إذا لم يكن المالك موجوداً
 
             ResidentProfile.objects.create(**resident_profile_data)
 
