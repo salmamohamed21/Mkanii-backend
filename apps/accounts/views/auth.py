@@ -19,7 +19,7 @@ from ..serializers import (
     UserSerializer,
     ResidentProfileSerializer,
 )
-from apps.buildings.models import Building
+from apps.buildings.models import Building, Unit
 from apps.buildings.serializers import BuildingSerializer
 from apps.payments.models import Wallet
 
