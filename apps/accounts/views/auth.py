@@ -313,7 +313,20 @@ class UserRolesView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({"roles": request.user.roles})
+        # Get roles from database
+        roles = [ur.role.name for ur in request.user.userrole_set.all()]
+
+        # Add implied roles based on profiles
+        from apps.accounts.models import ResidentProfile
+        from apps.buildings.models import Building
+        if ResidentProfile.objects.filter(user=request.user).exists():
+            if 'resident' not in roles:
+                roles.append('resident')
+        if Building.objects.filter(union_head=request.user).exists():
+            if 'union_head' not in roles:
+                roles.append('union_head')
+
+        return Response({"roles": roles})
 
 
 # ============================
@@ -325,9 +338,12 @@ class AddRoleView(APIView):
     def post(self, request):
         new_role = request.data.get("role")
         user = request.user
-        if new_role not in user.roles:
-            user.roles.append(new_role)
-            user.save()
+        # Get current roles from database
+        current_roles = [ur.role.name for ur in user.userrole_set.all()]
+        if new_role not in current_roles:
+            # Create the role if it doesn't exist
+            role, created = Role.objects.get_or_create(name=new_role)
+            user.userrole_set.create(role=role)
             return Response({"message": f"تمت إضافة الدور '{new_role}' بنجاح."})
         return Response({"message": "الدور موجود بالفعل."})
 

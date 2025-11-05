@@ -17,6 +17,11 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
+    @property
+    def roles(self):
+        """Return a list of role names for the user."""
+        return [ur.role.name for ur in self.userrole_set.all()]
+
     def __str__(self):
         return self.full_name or self.email
 

@@ -1,7 +1,7 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action, api_view, permission_classes, authentication_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db.models import Q
@@ -26,13 +26,19 @@ class BuildingViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name', 'address']
 
     def get_queryset(self):
-        roles = getattr(self.request.user, 'roles', None)
-        if hasattr(roles, 'all'):
-            role_names = [r.name for r in roles.all()]
-        else:
-            role_names = []
+        # Get roles from database
+        roles = [ur.role.name for ur in self.request.user.userrole_set.all()]
 
-        if 'union_head' in role_names:
+        # Add implied roles based on profiles
+        from apps.accounts.models import ResidentProfile
+        if ResidentProfile.objects.filter(user=self.request.user).exists():
+            if 'resident' not in roles:
+                roles.append('resident')
+        if Building.objects.filter(union_head=self.request.user).exists():
+            if 'union_head' not in roles:
+                roles.append('union_head')
+
+        if 'union_head' in roles:
             return Building.objects.filter(union_head=self.request.user).order_by('created_at')
         return Building.objects.all().order_by('created_at')
 
@@ -123,34 +129,12 @@ class BuildingViewSet(viewsets.ModelViewSet):
         except ResidentProfile.DoesNotExist:
             return Response({'error': 'Resident not found in this building'}, status=404)
 
-    @action(detail=False, methods=['get'], permission_classes=[DynamicRolePermission], url_path='my-buildings')
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated], url_path='my-buildings')
     def my_buildings(self, request):
         """
-        Get buildings for the current union_head user only.
+        Get buildings for the current authenticated user where they are the union_head.
+        Returns empty list if no buildings found.
         """
-        roles = getattr(request.user, 'roles', None)
-        if hasattr(roles, 'all'):
-            roles = [r.name for r in roles.all()]
-        elif not isinstance(roles, list):
-            roles = [str(roles)]
-
-        # Handle case where roles might be stored as strings like "['union_head']"
-        flattened_roles = []
-        for role in roles:
-            if isinstance(role, str) and role.startswith('[') and role.endswith(']'):
-                # Parse the string list
-                try:
-                    import ast
-                    parsed = ast.literal_eval(role)
-                    flattened_roles.extend(parsed)
-                except:
-                    flattened_roles.append(role.strip("[]'\""))
-            else:
-                flattened_roles.append(role)
-
-        if 'union_head' not in flattened_roles:
-            return Response({'error': 'Access denied. Only union heads can access this endpoint.'}, status=403)
-
         buildings = Building.objects.filter(union_head_id=request.user.id).order_by('created_at')
 
         print("🔍 Authenticated user:", request.user.id, request.user.email)
@@ -242,13 +226,19 @@ class UnitViewSet(viewsets.ModelViewSet):
     ordering_fields = ['floor_number', 'apartment_number']
 
     def get_queryset(self):
-        roles = getattr(self.request.user, 'roles', None)
-        if hasattr(roles, 'all'):
-            role_names = [r.name for r in roles.all()]
-        else:
-            role_names = []
+        # Get roles from database
+        roles = [ur.role.name for ur in self.request.user.userrole_set.all()]
 
-        if 'union_head' in role_names:
+        # Add implied roles based on profiles
+        from apps.accounts.models import ResidentProfile
+        if ResidentProfile.objects.filter(user=self.request.user).exists():
+            if 'resident' not in roles:
+                roles.append('resident')
+        if Building.objects.filter(union_head=self.request.user).exists():
+            if 'union_head' not in roles:
+                roles.append('union_head')
+
+        if 'union_head' in roles:
             return Unit.objects.filter(building__union_head=self.request.user).order_by('created_at')
         return Unit.objects.all().order_by('created_at')
 

@@ -17,35 +17,28 @@ class DynamicRolePermission(permissions.BasePermission):
         if user.is_superuser or user.is_staff:
             return True
 
-        roles = getattr(user, 'roles', None)
-        if hasattr(roles, 'all'):
-            roles = [r.name for r in roles.all()]
-        elif not isinstance(roles, list):
-            roles = [str(roles)]
+        # Get roles from database
+        roles = [ur.role.name for ur in user.userrole_set.all()]
 
-        # Handle case where roles might be stored as strings like "['union_head']"
-        flattened_roles = []
-        for role in roles:
-            if isinstance(role, str) and role.startswith('[') and role.endswith(']'):
-                # Parse the string list
-                try:
-                    import ast
-                    parsed = ast.literal_eval(role)
-                    flattened_roles.extend(parsed)
-                except:
-                    flattened_roles.append(role.strip("[]'\""))
-            else:
-                flattened_roles.append(role)
+        # Add implied roles based on profiles
+        from apps.accounts.models import ResidentProfile
+        from apps.buildings.models import Building
+        if ResidentProfile.objects.filter(user=user).exists():
+            if 'resident' not in roles:
+                roles.append('resident')
+        if Building.objects.filter(union_head=user).exists():
+            if 'union_head' not in roles:
+                roles.append('union_head')
 
         # Allow authenticated users to read and update notifications since queryset is filtered by user
         if view.basename == "notification" and request.method in ["GET", "POST"] and user.is_authenticated:
             return True
 
-        if "resident" in flattened_roles:
+        if "resident" in roles:
             return view.action in ["list", "retrieve", "create"]
-        elif "technician" in flattened_roles:
+        elif "technician" in roles:
             return view.basename in ["maintenance", "notification"]
-        elif "union_head" in flattened_roles:
+        elif "union_head" in roles:
             return True
         return False
 
@@ -55,33 +48,26 @@ class DynamicRolePermission(permissions.BasePermission):
         if user.is_superuser or user.is_staff:
             return True
 
-        roles = getattr(user, 'roles', None)
-        if hasattr(roles, 'all'):
-            roles = [r.name for r in roles.all()]
-        elif not isinstance(roles, list):
-            roles = [str(roles)]
+        # Get roles from database
+        roles = [ur.role.name for ur in user.userrole_set.all()]
 
-        # Handle case where roles might be stored as strings like "['union_head']"
-        flattened_roles = []
-        for role in roles:
-            if isinstance(role, str) and role.startswith('[') and role.endswith(']'):
-                # Parse the string list
-                try:
-                    import ast
-                    parsed = ast.literal_eval(role)
-                    flattened_roles.extend(parsed)
-                except:
-                    flattened_roles.append(role.strip("[]'\""))
-            else:
-                flattened_roles.append(role)
+        # Add implied roles based on profiles
+        from apps.accounts.models import ResidentProfile
+        from apps.buildings.models import Building
+        if ResidentProfile.objects.filter(user=user).exists():
+            if 'resident' not in roles:
+                roles.append('resident')
+        if Building.objects.filter(union_head=user).exists():
+            if 'union_head' not in roles:
+                roles.append('union_head')
 
-        if "resident" in flattened_roles and hasattr(obj, "resident"):
+        if "resident" in roles and hasattr(obj, "resident"):
             return obj.resident.user == user
 
-        if "technician" in flattened_roles and hasattr(obj, "assigned_to"):
+        if "technician" in roles and hasattr(obj, "assigned_to"):
             return obj.assigned_to == user
 
-        if "union_head" in flattened_roles:
+        if "union_head" in roles:
             if hasattr(obj, "union_head"):
                 return obj.union_head == user
             # Special handling for Package model
