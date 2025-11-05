@@ -55,8 +55,8 @@ class BuildingViewSet(viewsets.ModelViewSet):
     def residents_requests(self, request, pk=None):
         building = self.get_object()
         from apps.accounts.models import ResidentProfile
-        requests = ResidentProfile.objects.filter(building=building, status='pending')
-        data = list(requests.values('id', 'user__full_name', 'floor_number', 'apartment_number', 'resident_type', 'created_at'))
+        requests = ResidentProfile.objects.filter(unit__building=building, status='pending')
+        data = list(requests.values('id', 'user__full_name', 'unit__floor_number', 'unit__apartment_number', 'resident_type', 'created_at'))
         return Response(data)
 
     @action(detail=True, methods=['post'], permission_classes=[DynamicRolePermission])
@@ -69,7 +69,7 @@ class BuildingViewSet(viewsets.ModelViewSet):
             from apps.accounts.models import ResidentProfile
             from apps.notifications.models import Notification
             from django.utils import timezone
-            resident_profile = ResidentProfile.objects.get(id=request_id, building=building, status='pending')
+            resident_profile = ResidentProfile.objects.get(id=request_id, unit__building=building, status='pending')
             if action == 'accept':
                 resident_profile.status = 'accepted'
                 # Send notification to resident
@@ -106,7 +106,7 @@ class BuildingViewSet(viewsets.ModelViewSet):
 
         try:
             from apps.accounts.models import ResidentProfile
-            resident = ResidentProfile.objects.get(id=resident_id, building=building)
+            resident = ResidentProfile.objects.get(id=resident_id, unit__building=building)
             # Get payment history
             from apps.packages.models import PackageInvoice
             payments = PackageInvoice.objects.filter(
@@ -158,7 +158,7 @@ class BuildingViewSet(viewsets.ModelViewSet):
         from apps.packages.models import PackageInvoice
 
         residents = ResidentProfile.objects.filter(
-            building=building,
+            unit__building=building,
             status='accepted'
         ).select_related('user')
 
@@ -194,7 +194,7 @@ class BuildingViewSet(viewsets.ModelViewSet):
         try:
             from apps.accounts.models import ResidentProfile
             resident_profile = ResidentProfile.objects.get(user=request.user)
-            building = resident_profile.building
+            building = resident_profile.unit.building if resident_profile.unit else None
             serializer = self.get_serializer(building)
             return Response(serializer.data)
         except ResidentProfile.DoesNotExist:

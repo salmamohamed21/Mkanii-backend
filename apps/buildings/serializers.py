@@ -44,7 +44,7 @@ class BuildingSerializer(serializers.ModelSerializer):
         from apps.accounts.models import ResidentProfile
         from apps.packages.models import PackageInvoice
 
-        residents = ResidentProfile.objects.filter(building=obj).select_related('user')
+        residents = ResidentProfile.objects.filter(unit__building=obj).select_related('user')
         resident_data = []
 
         for resident in residents:
