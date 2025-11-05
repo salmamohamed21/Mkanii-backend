@@ -22,6 +22,12 @@ class User(AbstractUser):
         """Return a list of role names for the user."""
         return [ur.role.name for ur in self.userrole_set.all()]
 
+    @property
+    def buildings(self):
+        """Return a queryset of buildings for the user if they are a union_head."""
+        from apps.buildings.models import Building
+        return Building.objects.filter(union_head=self)
+
     def __str__(self):
         return self.full_name or self.email
 
@@ -58,9 +64,6 @@ class ResidentProfile(models.Model):
     is_present = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    # حقل إضافي للمستأجرين
-    owner_national_id = models.CharField(max_length=20, null=True, blank=True)  # رقم الهوية الوطنية للمالك
 
     def __str__(self):
         if self.unit:
