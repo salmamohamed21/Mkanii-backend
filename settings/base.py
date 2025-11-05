@@ -115,7 +115,7 @@ SIMPLE_JWT = {
     'ALGORITHM': 'HS256',
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_COOKIE': 'access_token',
-    'AUTH_COOKIE_SECURE': True,
+    'AUTH_COOKIE_SECURE': not DEBUG,
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',
     'AUTH_COOKIE_SAMESITE': 'None',
@@ -193,8 +193,8 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # Cookie settings
-SESSION_COOKIE_SECURE = True  # True in production with HTTPS
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
+CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_TRUSTED_ORIGINS = [
