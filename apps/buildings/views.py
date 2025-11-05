@@ -202,6 +202,86 @@ class BuildingViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=500)
 
+    @action(detail=True, methods=['get'], permission_classes=[DynamicRolePermission], url_path='union-head-data')
+    def union_head_data(self, request, pk=None):
+        """
+        Get union head data for a specific building.
+        """
+        building = self.get_object()
+
+        # Check if user is union_head of this building
+        if building.union_head != request.user:
+            return Response({'error': 'Access denied. Only the union head can view this data.'}, status=403)
+
+        from apps.packages.models import Package, PackageBuilding, PackageInvoice
+
+        # Packages for this building
+        building_packages = Package.objects.filter(packagebuilding__building=building).only('id', 'name', 'description', 'is_recurring', 'package_type', 'created_at')
+
+        packages_data = []
+        for pkg in building_packages:
+            package_invoices = PackageInvoice.objects.filter(package=pkg, building=building).order_by('-created_at')
+            status = 'active'
+            amount = 0
+            due_date = None
+            if package_invoices.exists():
+                latest_invoice = package_invoices.first()
+                status = latest_invoice.status
+                amount = latest_invoice.amount
+                due_date = latest_invoice.due_date
+
+            packages_data.append({
+                'id': pkg.id,
+                'name': pkg.name,
+                'status': status,
+                'amount': amount,
+                'due_date': due_date,
+                'description': pkg.description,
+                'is_recurring': pkg.is_recurring,
+                'package_type': pkg.package_type,
+                'created_at': pkg.created_at,
+            })
+
+        # Personal packages (excluding those linked to this building)
+        created_packages = Package.objects.filter(created_by=request.user).exclude(packagebuilding__building=building).only('id', 'name', 'description', 'is_recurring', 'package_type', 'created_at')
+
+        personal_packages_data = []
+        for pkg in created_packages:
+            package_invoices = PackageInvoice.objects.filter(package=pkg).order_by('-created_at')
+            status = 'active'
+            amount = 0
+            due_date = None
+            if package_invoices.exists():
+                latest_invoice = package_invoices.first()
+                status = latest_invoice.status
+                amount = latest_invoice.amount
+                due_date = latest_invoice.due_date
+
+            personal_packages_data.append({
+                'id': pkg.id,
+                'name': pkg.name,
+                'status': status,
+                'amount': amount,
+                'due_date': due_date,
+                'description': pkg.description,
+                'is_recurring': pkg.is_recurring,
+                'package_type': pkg.package_type,
+                'created_at': pkg.created_at,
+            })
+
+        return Response({
+            'building': {
+                'id': building.id,
+                'name': building.name,
+                'address': building.address,
+                'total_units': building.total_units,
+                'total_floors': building.total_floors,
+                'units_per_floor': building.units_per_floor,
+                'packages': packages_data,
+            },
+            'personal_packages': personal_packages_data,
+        })
+
 
 class PublicBuildingNamesView(PublicAPIView):
     """
