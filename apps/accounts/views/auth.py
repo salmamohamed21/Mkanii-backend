@@ -114,13 +114,8 @@ class RegisterView(generics.CreateAPIView):
 
             # التحقق من الحقول المطلوبة حسب نوع الساكن
             if resident_type == 'owner':
-                required_fields = ['area', 'rooms_count']
-                missing_fields = [field for field in required_fields if not data.get(field)]
-                if missing_fields:
-                    return Response(
-                        {"error": f"الحقول التالية مطلوبة للمالك: {', '.join(missing_fields)}"},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
+                # 'area' and 'rooms_count' are optional for owners, save if provided
+                pass
             elif resident_type == 'tenant':
                 required_fields = ['owner_national_id', 'rental_start_date', 'rental_end_date', 'rental_value']
                 missing_fields = [field for field in required_fields if not data.get(field)]
