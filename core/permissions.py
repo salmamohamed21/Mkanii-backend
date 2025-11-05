@@ -34,12 +34,12 @@ class DynamicRolePermission(permissions.BasePermission):
         if view.basename == "notification" and request.method in ["GET", "POST"] and user.is_authenticated:
             return True
 
-        if "resident" in roles:
-            return view.action in ["list", "retrieve", "create"]
+        if "union_head" in roles:
+            return True
         elif "technician" in roles:
             return view.basename in ["maintenance", "notification"]
-        elif "union_head" in roles:
-            return True
+        elif "resident" in roles:
+            return view.action in ["list", "retrieve", "create"]
         return False
 
     def has_object_permission(self, request, view, obj):

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Endpoint</title>
+</head>
+<body>
+    <h1>Test /buildings/my-buildings/ Endpoint</h1>
+    <button id="testBtn">Test Endpoint</button>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                // Step 1: Login to get authentication
+                const loginResponse = await fetch('http://localhost:8000/api/auth/login/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'salmam28@gmail.com',
+                        password: 'Salma@123'
+                    }),
+                    credentials: 'include'  // Include cookies
+                });
+
+                if (!loginResponse.ok) {
+                    throw new Error('Login failed: ' + loginResponse.statusText);
+                }
+
+                const loginData = await loginResponse.json();
+                resultDiv.innerHTML += '<p>Login successful: ' + JSON.stringify(loginData) + '</p>';
+
+                // Step 2: Test the endpoint
+                const endpointResponse = await fetch('http://localhost:8000/buildings/my-buildings/', {
+                    method: 'GET',
+                    credentials: 'include'  // Include cookies for authentication
+                });
+
+                if (!endpointResponse.ok) {
+                    throw new Error('Endpoint failed: ' + endpointResponse.status + ' ' + endpointResponse.statusText);
+                }
+
+                const endpointData = await endpointResponse.json();
+                resultDiv.innerHTML += '<p>Endpoint response: ' + JSON.stringify(endpointData, null, 2) + '</p>';
+
+            } catch (error) {
+                resultDiv.innerHTML += '<p>Error: ' + error.message + '</p>';
+            }
+        });
+    </script>
+</body>
+</html>
