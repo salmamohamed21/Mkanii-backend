@@ -193,8 +193,8 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # Cookie settings
-SESSION_COOKIE_SECURE = False  # True in production with HTTPS
-CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = True  # True in production with HTTPS
+CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_TRUSTED_ORIGINS = [
