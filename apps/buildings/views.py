@@ -7,13 +7,14 @@ from rest_framework.views import APIView
 from django.db.models import Q
 from .models import Building, Unit
 from .serializers import BuildingSerializer, UnitSerializer
+from .permissions import BuildingPermission
 from apps.core.permissions import DynamicRolePermission
 from apps.core.views import PublicAPIView
 
 
 
 class BuildingViewSet(viewsets.ModelViewSet):
-    permission_classes = [DynamicRolePermission]
+    permission_classes = [BuildingPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['name', 'address']
     search_fields = ['name', 'address']

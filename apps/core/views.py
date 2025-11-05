@@ -45,7 +45,7 @@ def dashboard_stats(request):
     user = request.user
 
     # Check if user is union_head (either has role or owns buildings)
-    has_union_head_role = user.roles.filter(name='union_head').exists()
+    has_union_head_role = 'union_head' in user.roles
     owns_buildings = Building.objects.filter(union_head=user).exists()
 
     if not (has_union_head_role or owns_buildings):
@@ -57,7 +57,7 @@ def dashboard_stats(request):
     # Statistics
     total_buildings = buildings.count()
     total_residents = ResidentProfile.objects.filter(
-        building__in=buildings,
+        unit__building__in=buildings,
         status='accepted'
     ).count()
 
@@ -100,7 +100,7 @@ def latest_activities(request):
     user = request.user
 
     # Check if user is union_head (either has role or owns buildings)
-    has_union_head_role = user.roles.filter(name='union_head').exists()
+    has_union_head_role = 'union_head' in user.roles
     owns_buildings = Building.objects.filter(union_head=user).exists()
 
     if not (has_union_head_role or owns_buildings):
@@ -135,15 +135,15 @@ def latest_activities(request):
 
     # Recent resident registrations
     recent_residents = ResidentProfile.objects.filter(
-        building__in=buildings,
+        unit__building__in=buildings,
         status='accepted'
-    ).select_related('building', 'user').order_by('-created_at')[:3]
+    ).select_related('unit__building', 'user').order_by('-created_at')[:3]
 
     for resident in recent_residents:
         activities.append({
             'id': f'resident_{resident.id}',
             'type': 'resident',
-            'title': f'انضمام ساكن جديد - {resident.building.name}',
+            'title': f'انضمام ساكن جديد - {resident.unit.building.name}',
             'description': f'{resident.user.full_name}',
             'timestamp': resident.created_at,
             'icon': 'FaUsers',
