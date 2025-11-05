@@ -29,7 +29,7 @@ class PackageViewSet(viewsets.ModelViewSet):
             return queryset
 
         # ✅ باقي الفلترة حسب الدور
-        if hasattr(user, 'roles') and user.roles.filter(name='resident').exists():
+        if hasattr(user, 'roles') and 'resident' in user.roles:
             try:
                 resident_profile = user.resident_profiles.first()
                 if resident_profile and resident_profile.building:
@@ -37,7 +37,7 @@ class PackageViewSet(viewsets.ModelViewSet):
             except:
                 queryset = Package.objects.none()
 
-        elif hasattr(user, 'roles') and user.roles.filter(name='union_head').exists():
+        elif hasattr(user, 'roles') and 'union_head' in user.roles:
             building_ids = user.buildings.values_list('id', flat=True)
             queryset = queryset.filter(packagebuilding__building_id__in=building_ids).distinct()
 
@@ -140,12 +140,12 @@ def invoice_history(request):
     invoices = PackageInvoice.objects.none()
 
     # لو المستخدم ساكن
-    if hasattr(user, 'roles') and user.roles.filter(name='resident').exists():
+    if hasattr(user, 'roles') and 'resident' in user.roles:
         resident_profiles = user.resident_profiles.all()
         invoices = PackageInvoice.objects.filter(resident__in=resident_profiles).order_by('-created_at')
 
     # لو المستخدم رئيس اتحاد
-    elif hasattr(user, 'roles') and user.roles.filter(name='union_head').exists():
+    elif hasattr(user, 'roles') and 'union_head' in user.roles:
         building_ids = user.buildings.values_list('id', flat=True)
         invoices = PackageInvoice.objects.filter(building_id__in=building_ids).order_by('-created_at')
 
