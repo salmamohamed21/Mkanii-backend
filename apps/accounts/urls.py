@@ -7,7 +7,7 @@ from .views.auth import (
     BuildingViewSet, ResidentProfileViewSet,
     search_by_national_id, get_resident_profile_data, get_union_head_profile_data, #WelcomeView
 )
-from .views.social_login import GoogleLoginView
+from .views.social_login import GoogleLoginView, GoogleClientIdView
 
 router = DefaultRouter()
 router.register("union-heads", BuildingViewSet)
@@ -28,6 +28,7 @@ urlpatterns = [
     path("profile/union-head-data/", get_union_head_profile_data, name="union_head_profile_data"),
     path("search-by-national-id/<str:national_id>/", search_by_national_id, name="search_by_national_id"),
     path("google-login/", GoogleLoginView.as_view(), name="google_login"),
+    path("google-client-id/", GoogleClientIdView.as_view(), name="google_client_id"),
     #path("welcome/", WelcomeView.as_view(), name="welcome"),
     path("", include(router.urls)),
 ]

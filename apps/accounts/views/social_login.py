@@ -32,3 +32,8 @@ class GoogleLoginView(APIView):
 
         except ValueError:
             return Response({"error": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GoogleClientIdView(APIView):
+    def get(self, request):
+        return Response({"client_id": settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY})
