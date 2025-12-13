@@ -11,6 +11,7 @@ import json
 import logging
 import random
 from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 
 from django.conf import settings
 
@@ -60,159 +61,8 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        role_names = data.get('role_names', [])
-        logger.info(f"Received role_names: {role_names}")
-
-        # --------------------------------------
-        # 🏢 إذا كان المستخدم رئيس اتحاد (union_head)
-        # --------------------------------------
-        if 'union_head' in role_names:
-            logger.info(f"Creating union_head profile for user {user.id}")
-            required_fields = ['name', 'total_units', 'total_floors', 'units_per_floor']
-            missing_fields = [field for field in required_fields if not data.get(field)]
-            if missing_fields:
-                return Response(
-                    {"error": f"الحقول التالية مطلوبة لإنشاء العمارة: {', '.join(missing_fields)}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            address_parts = [
-                data.get('province', ''),
-                data.get('city', ''),
-                data.get('district', ''),
-                data.get('street', ''),
-            ]
-            address = ' '.join(part for part in address_parts if part).strip() or 'غير محدد'
-
-            building = Building.objects.create(
-                union_head=user,
-                name=data.get('name'),
-                address=address,
-                total_units=data.get('total_units'),
-                total_floors=data.get('total_floors'),
-                units_per_floor=data.get('units_per_floor'),
-                subscription_plan=data.get('subscription_plan', 'basic'),
-            )
-
-            # إنشاء محفظة لرئيس الاتحاد
-            Wallet.objects.create(owner_type='union_head', owner_id=user.id, current_balance=0)
-
-            # إنشاء محفظة للعمارة
-            Wallet.objects.create(owner_type='building', owner_id=building.id, current_balance=0)
-
-        # --------------------------------------
-        # 🏠 إذا كان المستخدم ساكن (resident)
-        # --------------------------------------
-        if 'resident' in role_names:
-            logger.info(f"Creating resident profile for user {user.id}")
-            resident_type = data.get('resident_type', 'owner')
-            floor_number = data.get('floor_number')
-            apartment_number = data.get('apartment_number')
-            building_id = data.get('building_id')
-            building_name = data.get('building_name')
-            address = data.get('address')
-
-            # التحقق من الحقول المطلوبة حسب نوع الساكن
-            if resident_type == 'owner':
-                # 'area' and 'rooms_count' are optional for owners, save if provided
-                pass
-            elif resident_type == 'tenant':
-                required_fields = ['owner_national_id', 'rental_start_date', 'rental_end_date', 'rental_value']
-                missing_fields = [field for field in required_fields if not data.get(field)]
-                if missing_fields:
-                    return Response(
-                        {"error": f"الحقول التالية مطلوبة للمستأجر: {', '.join(missing_fields)}"},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-
-            # إنشاء أو الحصول على العمارة إذا لم يكن building_id موجوداً
-            building = None
-            if building_id:
-                try:
-                    building = Building.objects.get(id=building_id)
-                except Building.DoesNotExist:
-                    return Response(
-                        {"error": "العمارة المحددة غير موجودة"},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-            elif building_name and address:
-                # إنشاء عمارة جديدة إذا لم تكن موجودة
-                building, created = Building.objects.get_or_create(
-                    name=building_name,
-                    address=address,
-                    defaults={
-                        'total_units': 1,  # قيمة افتراضية
-                        'total_floors': 1,
-                        'units_per_floor': 1,
-                        'subscription_plan': 'basic',
-                    }
-                )
-
-            # إنشاء أو الحصول على الوحدة
-            unit = None
-            if building and floor_number and apartment_number:
-                unit, created = Unit.objects.get_or_create(
-                    building=building,
-                    floor_number=floor_number,
-                    apartment_number=apartment_number,
-                    defaults={
-                        'area': data.get('area') if resident_type == 'owner' else None,
-                        'rooms_count': data.get('rooms_count') if resident_type == 'owner' else None,
-                        'status': 'available',
-                    }
-                )
-                # تحديث البيانات إذا كانت موجودة
-                if resident_type == 'owner':
-                    unit.area = data.get('area')
-                    unit.rooms_count = data.get('rooms_count')
-                    unit.save()
-
-            # إنشاء ResidentProfile
-            resident_profile_data = {
-                'user': user,
-                'unit': unit,
-                'resident_type': resident_type,
-                'status': 'active',
-                'is_present': True,
-            }
-
-            # إضافة البيانات المشتركة
-            if not unit:
-                resident_profile_data.update({
-                    'manual_building_name': building_name,
-                    'manual_address': address,
-                    'floor_number': floor_number,
-                    'apartment_number': apartment_number,
-                })
-
-            if resident_type == 'owner':
-                # إضافة area و rooms_count للمالك
-                resident_profile_data.update({
-                    'area': data.get('area'),
-                    'rooms_count': data.get('rooms_count'),
-                })
-            elif resident_type == 'tenant':
-                # البحث عن المالك باستخدام national_id
-                owner_national_id = data.get('owner_national_id')
-                try:
-                    owner = User.objects.get(national_id=owner_national_id)
-                    resident_profile_data['owner'] = owner
-                except User.DoesNotExist:
-                    return Response(
-                        {"error": "الرقم الوطني للمالك غير صحيح أو غير موجود"},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-
-                resident_profile_data.update({
-                    'rental_start_date': data.get('rental_start_date'),
-                    'rental_end_date': data.get('rental_end_date'),
-                    'rental_value': data.get('rental_value'),
-                })
-
-            ResidentProfile.objects.create(**resident_profile_data)
-
-            # إنشاء محفظة للساكن
-            Wallet.objects.create(owner_type='user', owner_id=user.id, current_balance=0)
+        # إنشاء محفظة للمستخدم
+        Wallet.objects.create(owner_type='user', owner_id=user.id, current_balance=0)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -223,7 +73,7 @@ class LoginView(APIView):
         password = request.data.get("password")
         user = authenticate(request, username=email, password=password)
 
-        if not user:
+        if not user or not user.is_active:
             return Response({"detail": "بيانات الدخول غير صحيحة"}, status=400)
 
         refresh = RefreshToken.for_user(user)
@@ -400,6 +250,106 @@ class ResidentProfileViewSet(viewsets.ModelViewSet):
     serializer_class = ResidentProfileSerializer
     permission_classes = [IsAuthenticated]
 
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        data['user'] = request.user.id
+
+        # Handle building
+        building_id = data.get('building')
+        if building_id == 'other':
+            # Create new building
+            building = Building.objects.create(
+                name=data.get('manual_building_name'),
+                address=data.get('manual_address'),
+                total_units=1,  # Default
+                total_floors=1,  # Default
+                units_per_floor=1,  # Default
+                approval_status='approved'
+            )
+        else:
+            try:
+                building = Building.objects.get(id=building_id)
+            except Building.DoesNotExist:
+                return Response({"error": "Building not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        resident_type = data.get('resident_type')
+        unit = None
+
+        if resident_type == 'tenant':
+            unit_id = data.get('unit')
+            if not unit_id:
+                return Response({"error": "Unit ID is required for tenants."}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                unit = Unit.objects.get(id=unit_id, building=building)
+            except Unit.DoesNotExist:
+                return Response({"error": "Selected unit not found in this building."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        elif resident_type == 'owner':
+            # Handle unit for owner
+            floor_number = data.get('floor_number')
+            apartment_number = data.get('apartment_number')
+            area = data.get('area')
+            rooms_count = data.get('rooms_count')
+            # Convert empty strings to None for numeric fields
+            if area == '':
+                area = None
+            if rooms_count == '':
+                rooms_count = None
+            
+            if not floor_number or not apartment_number:
+                return Response({"error": "Floor number and apartment number are required for owners."}, status=status.HTTP_400_BAD_REQUEST)
+
+            unit, created = Unit.objects.get_or_create(
+                building=building,
+                floor_number=floor_number,
+                apartment_number=apartment_number,
+                defaults={
+                    'area': area,
+                    'rooms_count': rooms_count,
+                    'status': 'available'
+                }
+            )
+            if not created:
+                # Update unit if it exists
+                if data.get('area') is not None and data.get('area') != '':
+                    unit.area = data.get('area')
+                if data.get('rooms_count') is not None and data.get('rooms_count') != '':
+                    unit.rooms_count = data.get('rooms_count')
+                unit.save()
+        else:
+            return Response({"error": "Invalid resident type."}, status=status.HTTP_400_BAD_REQUEST)
+
+        data['unit'] = unit.id
+
+        # Handle owner for tenants
+        if resident_type == 'tenant':
+            owner_national_id = data.get('owner_national_id')
+            if owner_national_id:
+                try:
+                    owner = User.objects.get(national_id=owner_national_id)
+                    data['owner'] = owner.id
+                except User.DoesNotExist:
+                    return Response({"error": "Owner not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        resident_profile = serializer.save()
+
+        # Send notification to union_head for approval
+        if resident_profile.unit and resident_profile.unit.building and resident_profile.unit.building.union_head:
+            from apps.notifications.models import Notification
+            union_head = resident_profile.unit.building.union_head
+            owner_name = resident_profile.owner.full_name if resident_profile.owner else 'غير محدد'
+            owner_phone = resident_profile.owner.phone_number if resident_profile.owner else 'غير محدد'
+
+            Notification.objects.create(
+                user=union_head,
+                title="طلب إضافة ساكن جديد",
+                message=f"تم طلب إضافة ساكن جديد: {resident_profile.user.full_name} للشقة {resident_profile.apartment_number} في الدور {resident_profile.floor_number}. بيانات المالك: {owner_name} - {owner_phone}. يرجى المراجعة والموافقة."
+            )
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
     def submit_rental_request(self, request):
         """
@@ -535,6 +485,86 @@ class ResidentProfileViewSet(viewsets.ModelViewSet):
             "message": "تم رفض طلب الإيجار"
         }, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def approve_resident(self, request, pk=None):
+        """
+        Endpoint for union_head to approve resident profile.
+        Updates resident status to 'approved'.
+        """
+        resident_profile = self.get_object()
+
+        # Check if user is the union_head of the building
+        if not resident_profile.unit or resident_profile.unit.building.union_head != request.user:
+            return Response(
+                {"error": "ليس لديك صلاحية الموافقة على هذا الساكن"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if resident_profile.status != 'pending':
+            return Response(
+                {"error": "هذا الساكن غير معلق للموافقة"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update resident profile status
+        resident_profile.status = 'approved'
+        resident_profile.save()
+
+        # Send notification to resident
+        from apps.notifications.models import Notification
+        Notification.objects.create(
+            user=resident_profile.user,
+            title="تمت الموافقة على طلب الانضمام",
+            message=f"تمت الموافقة على طلبك للانضمام إلى العمارة {resident_profile.unit.building.name} من قبل رئيس الاتحاد {request.user.full_name}"
+        )
+
+        return Response({
+            "message": "تمت الموافقة على الساكن بنجاح"
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def reject_resident(self, request, pk=None):
+        """
+        Endpoint for union_head to reject resident profile.
+        Updates resident status to 'rejected'.
+        """
+        resident_profile = self.get_object()
+        rejection_reason = request.data.get('rejection_reason', '')
+
+        # Check if user is the union_head of the building
+        if not resident_profile.unit or resident_profile.unit.building.union_head != request.user:
+            return Response(
+                {"error": "ليس لديك صلاحية رفض هذا الساكن"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if resident_profile.status != 'pending':
+            return Response(
+                {"error": "هذا الساكن غير معلق للرفض"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update resident profile status
+        resident_profile.status = 'rejected'
+        resident_profile.rejected_at = timezone.now()
+        resident_profile.save()
+
+        # Send notification to resident
+        from apps.notifications.models import Notification
+        message = f"تم رفض طلبك للانضمام إلى العمارة {resident_profile.unit.building.name} من قبل رئيس الاتحاد {request.user.full_name}"
+        if rejection_reason:
+            message += f". السبب: {rejection_reason}"
+
+        Notification.objects.create(
+            user=resident_profile.user,
+            title="تم رفض طلب الانضمام",
+            message=message
+        )
+
+        return Response({
+            "message": "تم رفض الساكن"
+        }, status=status.HTTP_200_OK)
+
 
 
 
@@ -563,63 +593,92 @@ def search_by_national_id(request, national_id):
 @permission_classes([IsAuthenticated])
 def get_resident_profile_data(request):
     try:
-        resident_profile = ResidentProfile.objects.get(user=request.user)
-        from apps.packages.models import Package, PackageBuilding, PackageInvoice
+        # Get all resident profiles for the user, ordered by most recent
+        resident_profiles = ResidentProfile.objects.filter(user=request.user).select_related('unit__building').order_by('-created_at')
 
-        # الباقات المشتركة (من العمارة)
-        building_packages = []
-        if resident_profile.building:
-            package_buildings = PackageBuilding.objects.filter(building=resident_profile.building)
-            for pb in package_buildings:
-                package_invoices = PackageInvoice.objects.filter(
-                    package=pb.package,
-                    resident=resident_profile,
-                    status__in=['pending', 'paid']
-                )
-                if package_invoices.exists():
-                    building_packages.append({
-                        'id': pb.package.id,
-                        'name': pb.package.name,
-                        'type': 'building',
-                        'status': package_invoices.first().status,
-                        'amount': package_invoices.first().amount,
-                        'due_date': package_invoices.first().due_date,
-                        'description': pb.package.description,
-                        'is_recurring': pb.package.is_recurring,
-                    })
+        if not resident_profiles.exists():
+            return Response({"detail": "Resident profile not found"}, status=404)
 
-        # الباقات الخاصة (التي أنشأها الساكن)
-        personal_packages = []
-        user_packages = Package.objects.filter(created_by=request.user)
-        for pkg in user_packages:
-            package_invoices = PackageInvoice.objects.filter(
-                package=pkg,
-                resident=resident_profile,
-                status__in=['pending', 'paid']
-            )
-            if package_invoices.exists():
-                personal_packages.append({
-                    'id': pkg.id,
-                    'name': pkg.name,
-                    'type': 'personal',
-                    'status': package_invoices.first().status,
-                    'amount': package_invoices.first().amount,
-                    'due_date': package_invoices.first().due_date,
-                    'description': pkg.description,
-                    'is_recurring': pkg.is_recurring,
-                })
+        resident_data = []
+        for resident_profile in resident_profiles:
+            # الباقات المشتركة (من العمارة)
+            building_packages = []
+            personal_packages = []
+            try:
+                from apps.packages.models import Package, PackageBuilding, PackageInvoice
 
-        return Response({
-            'building_name': resident_profile.building.name if resident_profile.building else resident_profile.manual_building_name,
-            'address': resident_profile.building.address if resident_profile.building else resident_profile.manual_address,
-            'floor_number': resident_profile.floor_number,
-            'apartment_number': resident_profile.apartment_number,
-            'resident_type': resident_profile.resident_type,
-            'building_packages': building_packages,
-            'personal_packages': personal_packages,
-        })
-    except ResidentProfile.DoesNotExist:
-        return Response({"detail": "Resident profile not found"}, status=404)
+                if resident_profile.building:
+                    package_buildings = PackageBuilding.objects.filter(building=resident_profile.building)
+                    for pb in package_buildings:
+                        package_invoices = PackageInvoice.objects.filter(
+                            package=pb.package,
+                            resident=resident_profile,
+                            status__in=['pending', 'paid']
+                        )
+                        if package_invoices.exists():
+                            building_packages.append({
+                                'id': pb.package.id,
+                                'name': pb.package.name,
+                                'type': 'building',
+                                'status': package_invoices.first().status,
+                                'amount': package_invoices.first().amount,
+                                'due_date': package_invoices.first().due_date,
+                                'description': pb.package.description,
+                                'is_recurring': pb.package.is_recurring,
+                            })
+
+                # الباقات الخاصة (التي أنشأها الساكن)
+                user_packages = Package.objects.filter(created_by=request.user)
+                for pkg in user_packages:
+                    package_invoices = PackageInvoice.objects.filter(
+                        package=pkg,
+                        resident=resident_profile,
+                        status__in=['pending', 'paid']
+                    )
+                    if package_invoices.exists():
+                        personal_packages.append({
+                            'id': pkg.id,
+                            'name': pkg.name,
+                            'type': 'personal',
+                            'status': package_invoices.first().status,
+                            'amount': package_invoices.first().amount,
+                            'due_date': package_invoices.first().due_date,
+                            'description': pkg.description,
+                            'is_recurring': pkg.is_recurring,
+                        })
+            except Exception as e:
+                # Log the error but don't fail the request
+                logger.error(f"Error fetching packages for resident profile: {str(e)}")
+                building_packages = []
+                personal_packages = []
+
+            resident_data.append({
+                'id': resident_profile.id,
+                'unit': resident_profile.unit.id if resident_profile.unit else None,
+                'building': resident_profile.unit.building.id if resident_profile.unit else None,
+                'building_name': resident_profile.building.name if resident_profile.building else resident_profile.manual_building_name,
+                'address': resident_profile.building.address if resident_profile.building else resident_profile.manual_address,
+                'floor_number': resident_profile.floor_number,
+                'apartment_number': resident_profile.apartment_number,
+                'resident_type': resident_profile.resident_type,
+                'status': resident_profile.status,
+                'rental_value': resident_profile.rental_value,
+                'rental_start_date': resident_profile.rental_start_date,
+                'rental_end_date': resident_profile.rental_end_date,
+                'unit_details': {
+                    'id': resident_profile.unit.id if resident_profile.unit else None,
+                    'area': resident_profile.unit.area if resident_profile.unit else None,
+                    'rooms_count': resident_profile.unit.rooms_count if resident_profile.unit else None,
+                    'status': resident_profile.unit.status if resident_profile.unit else None,
+                } if resident_profile.unit else None,
+                'building_packages': building_packages,
+                'personal_packages': personal_packages,
+            })
+
+        return Response(resident_data)
+    except Exception as e:
+        logger.error(f"Error fetching resident profile data: {str(e)}")
+        return Response({"detail": f"Error fetching resident profile data: {str(e)}"}, status=500)
 
 
 

@@ -22,38 +22,137 @@ class PackageViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = Package.objects.all().select_related("created_by")
 
+        # Get roles from database
+        roles = [ur.role.name for ur in user.userrole_set.all()]
+
+        # Add implied roles based on profiles
+        from apps.accounts.models import ResidentProfile
+        from apps.buildings.models import Building
+        is_resident = ResidentProfile.objects.filter(user=user).exists()
+        is_union_head = Building.objects.filter(union_head=user).exists()
+
+        if is_resident and 'resident' not in roles:
+            roles.append('resident')
+        if is_union_head and 'union_head' not in roles:
+            roles.append('union_head')
+
         # ✅ فلترة حسب building_id لو متبعت في الـ request
         building_id = self.request.query_params.get('building_id')
-        if building_id:
-            queryset = queryset.filter(packagebuilding__building_id=building_id).distinct()
-            return queryset
 
         # ✅ باقي الفلترة حسب الدور
-        if hasattr(user, 'roles') and 'resident' in user.roles:
+        if 'resident' in roles:
             try:
                 resident_profile = user.resident_profiles.first()
                 if resident_profile and resident_profile.building:
-                    queryset = queryset.filter(packagebuilding__building_id=resident_profile.building.id).distinct()
+                    allowed_building_id = resident_profile.building.id
+                    if building_id:
+                        # If building_id is provided, check if it matches the resident's building
+                        if building_id == str(allowed_building_id):
+                            queryset = queryset.filter(packagebuilding__building_id=building_id).distinct()
+                        else:
+                            queryset = Package.objects.none()
+                    else:
+                        queryset = queryset.filter(packagebuilding__building_id=allowed_building_id).distinct()
+                else:
+                    queryset = Package.objects.none()
             except:
                 queryset = Package.objects.none()
 
-        elif hasattr(user, 'roles') and 'union_head' in user.roles:
+        elif 'union_head' in roles:
             building_ids = user.buildings.values_list('id', flat=True)
-            queryset = queryset.filter(packagebuilding__building_id__in=building_ids).distinct()
+            if building_id:
+                # If building_id is provided, check if union_head manages that building
+                if building_id in [str(bid) for bid in building_ids]:
+                    queryset = queryset.filter(packagebuilding__building_id=building_id).distinct()
+                else:
+                    queryset = Package.objects.none()
+            else:
+                queryset = queryset.filter(packagebuilding__building_id__in=building_ids).distinct()
 
-        # Admin or other roles → show all
+        else:
+            # Admin or other roles → show all, or filter by building_id if provided
+            if building_id:
+                queryset = queryset.filter(packagebuilding__building_id=building_id).distinct()
+
         return queryset
 
     def perform_create(self, serializer):
-        package = serializer.save(created_by=self.request.user)
+        user = self.request.user
 
-        # Handle buildings association
-        buildings = self.request.data.get('buildings', [])
-        for building_id in buildings:
-            PackageBuilding.objects.create(package=package, building_id=building_id)
+        # Get roles from database
+        roles = [ur.role.name for ur in user.userrole_set.all()]
 
-        # إرسال إشعارات لسكان العمارات
-        self._send_package_notification(package, action="created")
+        # Add implied roles based on profiles
+        from apps.accounts.models import ResidentProfile
+        from apps.buildings.models import Building
+        is_resident = ResidentProfile.objects.filter(user=user).exists()
+        is_union_head = Building.objects.filter(union_head=user).exists()
+
+        if is_resident and 'resident' not in roles:
+            roles.append('resident')
+        if is_union_head and 'union_head' not in roles:
+            roles.append('union_head')
+
+        package = serializer.save(created_by=user)
+
+        # Staff/Admins behave like Union Heads
+        if 'union_head' in roles or user.is_staff or user.is_superuser:
+            from rest_framework.exceptions import ValidationError
+            buildings = self.request.data.get('buildings', [])
+            if not buildings:
+                raise ValidationError("Union head must specify at least one building when creating a package.")
+
+            for building_id in buildings:
+                PackageBuilding.objects.create(package=package, building_id=building_id)
+
+            self._send_package_notification(package, action="created")
+
+        elif 'resident' in roles:
+            from apps.accounts.models import ResidentProfile
+            from rest_framework.exceptions import ValidationError
+            from .models import PackageInvoice
+
+            try:
+                # Use filter().first() to avoid crash on multiple profiles, though it should be unique
+                resident_profile = ResidentProfile.objects.filter(user=user).first()
+                if not resident_profile or not resident_profile.unit or not resident_profile.unit.building:
+                     raise ValidationError("Your resident profile is incomplete or missing a building assignment.")
+                building = resident_profile.unit.building
+            except Exception as e:
+                raise ValidationError(f"Could not resolve resident profile: {e}")
+            
+            package.refresh_from_db()
+            amount = 0
+            due_date = package.start_date
+
+            if hasattr(package, 'packageutility'):
+                amount = package.packageutility.monthly_amount
+            elif hasattr(package, 'packageprepaid'):
+                amount = package.packageprepaid.average_monthly_charge
+            elif hasattr(package, 'packagefixed'):
+                amount = package.packagefixed.monthly_amount
+            elif hasattr(package, 'packagemisc'):
+                amount = package.packagemisc.total_amount
+                due_date = package.packagemisc.deadline
+
+            if not amount or amount <= 0:
+                raise ValidationError("Could not determine a valid, positive amount for the package invoice.")
+
+            PackageInvoice.objects.create(
+                package=package,
+                building=building,
+                resident=resident_profile,
+                amount=amount,
+                due_date=due_date,
+            )
+            
+            from apps.notifications.models import Notification
+            Notification.objects.create(
+                user=user,
+                title="Personal Package Created",
+                message=f"Your personal package '{package.name}' has been successfully created and an invoice has been issued."
+            )
+        
         return package
 
     def perform_update(self, serializer):
@@ -77,7 +176,7 @@ class PackageViewSet(viewsets.ModelViewSet):
 
         # الحصول على سكان العمارات المرتبطة
         package_buildings = PackageBuilding.objects.filter(package=package)
-        residents = ResidentProfile.objects.filter(building__in=[pb.building for pb in package_buildings])
+        residents = ResidentProfile.objects.filter(unit__building__in=[pb.building for pb in package_buildings])
 
         # تحديد الرسائل حسب الإجراء
         if action == "created":
@@ -139,13 +238,27 @@ def invoice_history(request):
     user = request.user
     invoices = PackageInvoice.objects.none()
 
+    # Get roles from database
+    roles = [ur.role.name for ur in user.userrole_set.all()]
+
+    # Add implied roles based on profiles
+    from apps.accounts.models import ResidentProfile
+    from apps.buildings.models import Building
+    is_resident = ResidentProfile.objects.filter(user=user).exists()
+    is_union_head = Building.objects.filter(union_head=user).exists()
+
+    if is_resident and 'resident' not in roles:
+        roles.append('resident')
+    if is_union_head and 'union_head' not in roles:
+        roles.append('union_head')
+
     # لو المستخدم ساكن
-    if hasattr(user, 'roles') and 'resident' in user.roles:
+    if 'resident' in roles:
         resident_profiles = user.resident_profiles.all()
         invoices = PackageInvoice.objects.filter(resident__in=resident_profiles).order_by('-created_at')
 
     # لو المستخدم رئيس اتحاد
-    elif hasattr(user, 'roles') and 'union_head' in user.roles:
+    elif 'union_head' in roles:
         building_ids = user.buildings.values_list('id', flat=True)
         invoices = PackageInvoice.objects.filter(building_id__in=building_ids).order_by('-created_at')
 

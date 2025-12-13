@@ -35,6 +35,7 @@ INSTALLED_APPS = [
         'apps.payments',
         'apps.notifications',
         'apps.core',
+        'apps.rentals',
 ]
 
 MIDDLEWARE = [
@@ -55,11 +56,25 @@ ROOT_URLCONF = 'urls'
 WSGI_APPLICATION = 'wsgi.application'
 ASGI_APPLICATION = 'asgi.application'
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL')
-    )
-}
+if DEBUG:
+    # Use local database in development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'mkani_db',
+            'USER': 'postgres',
+            'PASSWORD': 'mosa$555#Mo',
+            'HOST': '127.0.0.1',
+            'PORT': '5432',
+        }
+    }
+else:
+    # Use DATABASE_URL in production
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.getenv('DATABASE_URL')
+        )
+    }
 
 AUTH_USER_MODEL = 'accounts.User'
 

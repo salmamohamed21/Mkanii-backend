@@ -1,7 +1,9 @@
 from django.db import models
 from apps.accounts.models import User
+import uuid
 
 class Package(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     PACKAGE_TYPES = [
         ('utilities', 'Utilities'),
         ('prepaid', 'Prepaid'),
@@ -21,6 +23,7 @@ class Package(models.Model):
         return self.name
 
 class PackageUtility(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     SERVICE_TYPES = [
         ('electricity', 'Electricity'),
         ('water', 'Water'),
@@ -47,6 +50,7 @@ class PackagePrepaid(models.Model):
     average_monthly_charge = models.DecimalField(max_digits=10, decimal_places=2)
 
 class PackageFixed(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     PAYMENT_METHODS = [
         ('union_head', 'Union Head'),
         ('direct_person', 'Direct Person'),
@@ -61,6 +65,7 @@ class PackageFixed(models.Model):
     national_id = models.CharField(max_length=20, blank=True, null=True)
 
 class PackageMisc(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     package = models.OneToOneField(Package, on_delete=models.CASCADE)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_date = models.DateField()
@@ -74,6 +79,7 @@ class PackageBuilding(models.Model):
         unique_together = ('package', 'building')
 
 class PackageInvoice(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('paid', 'Paid'),

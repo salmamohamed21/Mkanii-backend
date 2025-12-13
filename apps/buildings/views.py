@@ -27,21 +27,42 @@ class BuildingViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name', 'address']
 
     def get_queryset(self):
+        user = self.request.user
         # Get roles from database
-        roles = [ur.role.name for ur in self.request.user.userrole_set.all()]
+        roles = [ur.role.name for ur in user.userrole_set.all()]
 
         # Add implied roles based on profiles
         from apps.accounts.models import ResidentProfile
-        if ResidentProfile.objects.filter(user=self.request.user).exists():
-            if 'resident' not in roles:
-                roles.append('resident')
-        if Building.objects.filter(union_head=self.request.user).exists():
-            if 'union_head' not in roles:
-                roles.append('union_head')
+        is_resident = ResidentProfile.objects.filter(user=user).exists()
+        is_union_head = Building.objects.filter(union_head=user).exists()
 
+        if is_resident and 'resident' not in roles:
+            roles.append('resident')
+        if is_union_head and 'union_head' not in roles:
+            roles.append('union_head')
+        
+        # Superusers and staff should see all buildings
+        if user.is_superuser or user.is_staff:
+            return Building.objects.all().order_by('created_at')
+
+        query = Q()
         if 'union_head' in roles:
-            return Building.objects.filter(union_head=self.request.user).order_by('created_at')
-        return Building.objects.all().order_by('created_at')
+            query |= Q(union_head=user)
+
+        if 'resident' in roles:
+            try:
+                resident_profile = ResidentProfile.objects.filter(user=user).first()
+                if resident_profile and resident_profile.unit and resident_profile.unit.building:
+                    query |= Q(pk=resident_profile.unit.building.pk)
+            except Exception:
+                pass  # Not a resident, or profile incomplete
+
+        if query:
+            return Building.objects.filter(query).distinct().order_by('created_at')
+        
+        # For other authenticated users who are not admin/staff/union_head/resident,
+        # return no buildings.
+        return Building.objects.none()
 
     def perform_create(self, serializer):
         serializer.save(union_head=self.request.user)
@@ -56,8 +77,18 @@ class BuildingViewSet(viewsets.ModelViewSet):
     def residents_requests(self, request, pk=None):
         building = self.get_object()
         from apps.accounts.models import ResidentProfile
-        requests = ResidentProfile.objects.filter(unit__building=building, status='pending')
-        data = list(requests.values('id', 'user__full_name', 'unit__floor_number', 'unit__apartment_number', 'resident_type', 'created_at'))
+        from django.utils import timezone
+        from datetime import timedelta
+        fifteen_days_ago = timezone.now() - timedelta(days=15)
+        requests = ResidentProfile.objects.filter(
+            Q(status='pending') | (Q(status='rejected') & Q(rejected_at__gte=fifteen_days_ago)),
+            unit__building=building
+        )
+        data = list(requests.values(
+            'id', 'user__full_name', 'user__phone_number', 'user__national_id',
+            'unit__floor_number', 'unit__apartment_number', 'resident_type',
+            'created_at', 'status', 'rejected_at'
+        ))
         return Response(data)
 
     @action(detail=True, methods=['post'], permission_classes=[DynamicRolePermission])
@@ -81,6 +112,7 @@ class BuildingViewSet(viewsets.ModelViewSet):
                 )
             elif action == 'reject':
                 resident_profile.status = 'rejected'
+                resident_profile.rejected_at = timezone.now()
                 # Send notification to resident with rejection reason
                 message = f"تم رفض طلبك للانضمام إلى العمارة {building.name} من قبل رئيس الاتحاد {request.user.full_name}"
                 if rejection_reason:
@@ -122,7 +154,7 @@ class BuildingViewSet(viewsets.ModelViewSet):
                 'national_id': resident.user.national_id,
                 'floor_number': resident.floor_number,
                 'apartment_number': resident.apartment_number,
-                'resident_type': resident.get_resident_type_display(),
+                'resident_type': resident.resident_type,
                 'created_at': resident.created_at.isoformat(),
                 'payment_history': list(payments)
             }
@@ -179,7 +211,8 @@ class BuildingViewSet(viewsets.ModelViewSet):
                 'national_id': resident.user.national_id,
                 'floor_number': resident.floor_number,
                 'apartment_number': resident.apartment_number,
-                'resident_type': resident.get_resident_type_display(),
+                'resident_type': resident.resident_type,
+                'is_present': resident.is_present,
                 'building_name': building.name,
                 'created_at': resident.created_at.isoformat(),
                 'payment_history': list(payments)
@@ -194,12 +227,12 @@ class BuildingViewSet(viewsets.ModelViewSet):
         """
         try:
             from apps.accounts.models import ResidentProfile
-            resident_profile = ResidentProfile.objects.get(user=request.user)
+            resident_profile = ResidentProfile.objects.filter(user=request.user).first()
+            if not resident_profile:
+                return Response({'error': 'Resident profile not found'}, status=404)
             building = resident_profile.unit.building if resident_profile.unit else None
             serializer = self.get_serializer(building)
             return Response(serializer.data)
-        except ResidentProfile.DoesNotExist:
-            return Response({'error': 'Resident profile not found'}, status=404)
         except Exception as e:
             return Response({'error': str(e)}, status=500)
 
@@ -286,8 +319,8 @@ class BuildingViewSet(viewsets.ModelViewSet):
 
 class PublicBuildingNamesView(PublicAPIView):
     """
-    🔹 Endpoint: /api/public/building-names/
-    🔹 الهدف: عرض أسماء وعناوين العمارات المتاحة للجميع (بدون تسجيل دخول)
+     Endpoint: /api/public/building-names/
+     الهدف: عرض أسماء وعناوين العمارات المتاحة للجميع (بدون تسجيل دخول)
     """
     def get(self, request):
         print("🔍 user:", request.user)
@@ -307,30 +340,76 @@ class UnitViewSet(viewsets.ModelViewSet):
     ordering_fields = ['floor_number', 'apartment_number']
 
     def get_queryset(self):
+        user = self.request.user
         # Get roles from database
-        roles = [ur.role.name for ur in self.request.user.userrole_set.all()]
+        roles = [ur.role.name for ur in user.userrole_set.all()]
 
         # Add implied roles based on profiles
         from apps.accounts.models import ResidentProfile
-        if ResidentProfile.objects.filter(user=self.request.user).exists():
-            if 'resident' not in roles:
-                roles.append('resident')
-        if Building.objects.filter(union_head=self.request.user).exists():
-            if 'union_head' not in roles:
-                roles.append('union_head')
+        is_resident = ResidentProfile.objects.filter(user=user).exists()
+        is_union_head = Building.objects.filter(union_head=user).exists()
 
+        if is_resident and 'resident' not in roles:
+            roles.append('resident')
+        if is_union_head and 'union_head' not in roles:
+            roles.append('union_head')
+
+        # Superusers and staff should see all units
+        if user.is_superuser or user.is_staff:
+            return Unit.objects.all().order_by('id')
+
+        query = Q()
         if 'union_head' in roles:
-            return Unit.objects.filter(building__union_head=self.request.user).order_by('created_at')
-        return Unit.objects.all().order_by('created_at')
+            # Units in buildings where user is union_head
+            query |= Q(building__union_head=user)
+
+        if 'resident' in roles:
+            try:
+                resident_profile = ResidentProfile.objects.get(user=user)
+                if resident_profile.unit and resident_profile.unit.building:
+                    # All units in the building where user is a resident
+                    query |= Q(building=resident_profile.unit.building)
+            except ResidentProfile.DoesNotExist:
+                pass  # Not a resident, or profile incomplete
+
+        if query:
+            return Unit.objects.filter(query).distinct().order_by('id')
+
+        # For other authenticated users, return no units.
+        return Unit.objects.none()
 
     def perform_create(self, serializer):
         serializer.save()
 
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def available_units(self, request):
+        """
+        Get available units for a specific building.
+        Query parameter: building_id
+        """
+        building_id = request.query_params.get('building_id')
+        if not building_id:
+            return Response({'error': 'building_id parameter required'}, status=400)
+
+        try:
+            building = Building.objects.get(id=building_id)
+        except Building.DoesNotExist:
+            return Response({'error': 'Building not found'}, status=404)
+
+        # Get units that are available
+        available_units = Unit.objects.filter(
+            building=building,
+            status='available'
+        ).select_related('building')
+
+        serializer = self.get_serializer(available_units, many=True)
+        return Response(serializer.data)
+
 
 class PublicBuildingsListView(PublicAPIView):
     """
-    🔹 Endpoint: /api/public/public-buildings-list/
-    🔹 الهدف: عرض أسماء وعناوين العمارات المتاحة للجميع (بدون تسجيل دخول)
+     Endpoint: /api/public/public-buildings-list/
+     الهدف: عرض أسماء وعناوين العمارات المتاحة للجميع (بدون تسجيل دخول)
     """
     def get(self, request):
         buildings = Building.objects.all()

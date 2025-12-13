@@ -6,6 +6,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db.models import Sum, Count
+from django.db.models.functions import Cast
+from django.db.models import CharField
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
@@ -45,7 +47,7 @@ def dashboard_stats(request):
     user = request.user
 
     # Check if user is union_head (either has role or owns buildings)
-    has_union_head_role = 'union_head' in user.roles
+    has_union_head_role = 'union_head' in getattr(user, 'roles', [])
     owns_buildings = Building.objects.filter(union_head=user).exists()
 
     if not (has_union_head_role or owns_buildings):
@@ -73,7 +75,7 @@ def dashboard_stats(request):
 
     monthly_revenue = Transaction.objects.filter(
         wallet__owner_type='building',
-        wallet__owner_id__in=buildings.values_list('id', flat=True),
+        wallet__owner_id__in=buildings.annotate(id_str=Cast('id', CharField())).values_list('id_str', flat=True),
         created_at__gte=current_month,
         created_at__lt=next_month,
         status='completed'
@@ -100,7 +102,7 @@ def latest_activities(request):
     user = request.user
 
     # Check if user is union_head (either has role or owns buildings)
-    has_union_head_role = 'union_head' in user.roles
+    has_union_head_role = 'union_head' in getattr(user, 'roles', [])
     owns_buildings = Building.objects.filter(union_head=user).exists()
 
     if not (has_union_head_role or owns_buildings):
@@ -115,7 +117,7 @@ def latest_activities(request):
     # Recent transactions (payments)
     recent_transactions = Transaction.objects.filter(
         wallet__owner_type='building',
-        wallet__owner_id__in=building_ids,
+        wallet__owner_id__in=[str(bid) for bid in building_ids],
         status='completed'
     ).select_related('wallet', 'invoice').order_by('-created_at')[:5]
 

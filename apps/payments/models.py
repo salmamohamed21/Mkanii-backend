@@ -1,9 +1,10 @@
+import uuid
 from django.db import models
 from apps.accounts.models import User
 
 class Wallet(models.Model):
     owner_type = models.CharField(max_length=50)  # user | building | technician | union_head | company
-    owner_id = models.PositiveIntegerField()
+    owner_id = models.CharField(max_length=50)
     current_balance = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -24,6 +25,7 @@ class WalletTransaction(models.Model):
 
 
 class SubscriptionPlan(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, unique=True)
     frequency = models.CharField(max_length=50)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
@@ -47,6 +49,7 @@ class UserSubscription(models.Model):
 
 
 class Invoice(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     source_type = models.CharField(max_length=50)
     source_id = models.PositiveIntegerField()

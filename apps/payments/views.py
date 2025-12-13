@@ -1,6 +1,6 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, filters, status
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import Wallet, WalletTransaction, SubscriptionPlan, UserSubscription, Invoice, Transaction
@@ -105,3 +105,87 @@ def sahel_bill_payment(request):
         return Response({"error": "Bill number and amount required"}, status=status.HTTP_400_BAD_REQUEST)
     result = SahelService.pay_bill(bill_number, amount)
     return Response(result, status=status.HTTP_200_OK)
+
+
+from django.db import transaction
+from apps.accounts.models import User
+from decimal import Decimal
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def pay_rent(request):
+    """
+    Handles a rent payment from a tenant to a landlord.
+    """
+    tenant = request.user
+    landlord_id = request.data.get('landlord_id')
+    # The frontend sends 'apartment_id', which is actually the resident_profile_id.
+    resident_profile_id = request.data.get('apartment_id')
+    try:
+        amount = Decimal(request.data.get('amount'))
+    except (TypeError, ValueError):
+        return Response({"error": "Invalid amount provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not all([landlord_id, resident_profile_id, amount]):
+        return Response({"error": "Missing required fields: landlord_id, apartment_id, amount."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if amount <= 0:
+        return Response({"error": "Amount must be positive."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        resident_profile = ResidentProfile.objects.get(id=resident_profile_id, user=tenant)
+    except ResidentProfile.DoesNotExist:
+        return Response({"error": "Rental profile not found for this user."}, status=status.HTTP_404_NOT_FOUND)
+
+    if str(resident_profile.owner.id) != landlord_id:
+        return Response({"error": "Landlord ID does not match the owner of this rental profile."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        landlord = User.objects.get(id=landlord_id)
+        tenant_wallet, _ = Wallet.objects.get_or_create(owner_id=tenant.id, owner_type='user')
+        landlord_wallet, _ = Wallet.objects.get_or_create(owner_id=landlord.id, owner_type='user')
+    except User.DoesNotExist:
+        return Response({"error": "Could not find landlord user."}, status=status.HTTP_404_NOT_FOUND)
+
+    if tenant_wallet.current_balance < amount:
+        return Response({"error": "Insufficient balance."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        with transaction.atomic():
+            # Debit tenant's wallet
+            tenant_wallet.current_balance -= amount
+            tenant_wallet.save()
+            Transaction.objects.create(
+                wallet=tenant_wallet,
+                amount=-amount,
+                transaction_type='rent_payment',
+                status='completed',
+                description=f'Rent payment to {landlord.full_name} for unit {resident_profile.unit}.'
+            )
+
+            # Credit landlord's wallet
+            landlord_wallet.current_balance += amount
+            landlord_wallet.save()
+            Transaction.objects.create(
+                wallet=landlord_wallet,
+                amount=amount,
+                transaction_type='rent_received',
+                status='completed',
+                description=f'Rent received from {tenant.full_name} for unit {resident_profile.unit}.'
+            )
+            
+            # Optionally create an Invoice
+            Invoice.objects.create(
+                user=tenant,
+                amount=amount,
+                status='paid',
+                source_id=resident_profile.id,
+                source_type='rent',
+                description=f'Rent for {resident_profile.unit}'
+            )
+
+    except Exception as e:
+        # Log the exception e
+        return Response({"error": "An error occurred during the transaction."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({"message": "Rent paid successfully."}, status=status.HTTP_200_OK)
