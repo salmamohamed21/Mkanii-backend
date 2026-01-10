@@ -364,13 +364,10 @@ class UnitViewSet(viewsets.ModelViewSet):
             query |= Q(building__union_head=user)
 
         if 'resident' in roles:
-            try:
-                resident_profile = ResidentProfile.objects.get(user=user)
-                if resident_profile.unit and resident_profile.unit.building:
-                    # All units in the building where user is a resident
-                    query |= Q(building=resident_profile.unit.building)
-            except ResidentProfile.DoesNotExist:
-                pass  # Not a resident, or profile incomplete
+            resident_profile = ResidentProfile.objects.filter(user=user).first()
+            if resident_profile and resident_profile.unit and resident_profile.unit.building:
+                # All units in the building where user is a resident
+                query |= Q(building=resident_profile.unit.building)
 
         if query:
             return Unit.objects.filter(query).distinct().order_by('id')

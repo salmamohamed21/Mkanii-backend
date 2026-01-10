@@ -8,7 +8,7 @@ class UnitSerializer(serializers.ModelSerializer):
         model = Unit
         fields = [
             'id', 'building', 'building_name', 'floor_number', 'apartment_number',
-            'area', 'rooms_count', 'status', 'created_at', 'updated_at'
+            'area', 'rooms_count', 'status'
         ]
 
     def create(self, validated_data):

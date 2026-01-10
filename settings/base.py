@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
-import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
@@ -10,7 +9,7 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'replace-me-in-prod')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 #ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
-ALLOWED_HOSTS = ['*' , '.railway.app']
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'django_filters',
@@ -29,13 +28,13 @@ INSTALLED_APPS = [
     'channels',
 
         # local apps
-        'apps.accounts',
-        'apps.buildings',
-        'apps.packages',
-        'apps.payments',
-        'apps.notifications',
-        'apps.core',
-        'apps.rentals',
+        'mkani.apps.accounts',
+        'mkani.apps.buildings',
+        'mkani.apps.packages',
+        'mkani.apps.payments',
+        'mkani.apps.maintenance',
+        'mkani.apps.notifications',
+        'mkani.apps.core',
 ]
 
 MIDDLEWARE = [
@@ -48,38 +47,30 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'apps.accounts.middleware.AutoRefreshTokenMiddleware',
-    'middlewares.JWTAuthFromCookieMiddleware',
+    'mkani.apps.accounts.middleware.AutoRefreshTokenMiddleware',
+    'mkani.middlewares.JWTAuthFromCookieMiddleware',
 ]
 
-ROOT_URLCONF = 'urls'
-WSGI_APPLICATION = 'wsgi.application'
-ASGI_APPLICATION = 'asgi.application'
+ROOT_URLCONF = 'mkani.urls'
+WSGI_APPLICATION = 'mkani.wsgi.application'
+ASGI_APPLICATION = 'mkani.asgi.application'
 
-if DEBUG:
-    # Use local database in development
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'mkani_db',
-            'USER': 'postgres',
-            'PASSWORD': 'mosa$555#Mo',
-            'HOST': '127.0.0.1',
-            'PORT': '5432',
-        }
+# Database (Postgres by default)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'mkani_db'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'mosa$555#Mo'),
+        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
-else:
-    # Use DATABASE_URL in production
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=os.getenv('DATABASE_URL')
-        )
-    }
+}
 
 AUTH_USER_MODEL = 'accounts.User'
 
 AUTHENTICATION_BACKENDS = [
-    'apps.accounts.backends.EmailBackend',  # تسجيل الدخول بالإيميل
+    'mkani.apps.accounts.backends.EmailBackend',  # تسجيل الدخول بالإيميل
     'django.contrib.auth.backends.ModelBackend',  # الاحتياطي
 ]
 
@@ -92,7 +83,6 @@ USE_TZ = True
 LOCALE_PATHS = [BASE_DIR / 'locale']
 
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -116,9 +106,8 @@ TEMPLATES = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'apps.accounts.authentication.CookieJWTAuthentication',
+        'mkani.apps.accounts.authentication.CookieJWTAuthentication',
     ),
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 SIMPLE_JWT = {
@@ -130,10 +119,9 @@ SIMPLE_JWT = {
     'ALGORITHM': 'HS256',
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_COOKIE': 'access_token',
-    'AUTH_COOKIE_SECURE': not DEBUG,
+    'AUTH_COOKIE_SECURE': False,
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',
-    'AUTH_COOKIE_SAMESITE': 'None',
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
@@ -180,15 +168,10 @@ SPECTACULAR_SETTINGS = {
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://mkani-frontend.vercel.app',
-    'https://mkani-frontend-r8iipcgi8-salma-mohameds-projects-3db72cdf.vercel.app',
-    'https://terrific-success-production.up.railway.app',
-    'https://mkani-production.up.railway.app',
+    "https://app.makanii.cloud",
 ]
 
-# Allow specific origins only (required for cookies to work with cross-site requests)
+# Allow all origins for development (can be restricted in production)
 CORS_ALLOW_ALL_ORIGINS = False
 
 # Allow credentials (cookies, authorization headers)
@@ -208,14 +191,11 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # Cookie settings
-SESSION_COOKIE_SECURE = not DEBUG  # True in production with HTTPS
-CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = False  # True in production with HTTPS
+CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://mkani-frontend-r8iipcgi8-salma-mohameds-projects-3db72cdf.vercel.app",
-    "https://terrific-success-production.up.railway.app",
-    "https://mkani-production.up.railway.app",
+    "https://app.makanii.cloud",
+    "https://api.makanii.cloud",
 ]

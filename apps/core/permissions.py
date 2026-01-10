@@ -1,5 +1,5 @@
 from rest_framework import permissions
-from apps.buildings.models import Building
+from apps.buildings.models import Building, Unit
 
 
 def get_user_roles(user):
@@ -48,11 +48,24 @@ class DynamicRolePermission(permissions.BasePermission):
             return True
         
         if "resident" in roles:
-            # Allow residents to access building list and detail
-            if view.basename == 'building' and view.action in ['list', 'retrieve', 'resident_building']:
+            # Allow safe methods (GET, HEAD, OPTIONS) for residents by default.
+            # Querysets should handle filtering what they can see.
+            if request.method in permissions.SAFE_METHODS:
                 return True
-            # Allow residents to access their own data
-            return view.action in ["list", "retrieve", "create"]
+
+            # For unsafe methods (POST, PUT, PATCH, DELETE)
+            # Allow residents to update their own unit.
+            if view.basename == 'unit' and view.action in ['update', 'partial_update']:
+                return True
+
+            # Allow creation of objects that are not units or buildings
+            # (e.g., maintenance requests). Specific views should add
+            # their own permission checks if needed.
+            if view.action == 'create' and view.basename not in ['unit', 'building']:
+                return True
+            
+            # Deny other unsafe actions for residents.
+            return False
 
         if "technician" in roles:
             return getattr(view, "basename", "") == "maintenancerequest"
@@ -75,6 +88,14 @@ class DynamicRolePermission(permissions.BasePermission):
                 from apps.accounts.models import ResidentProfile
                 return ResidentProfile.objects.filter(user=user, unit__building=obj).exists()
             return False
+
+        if isinstance(obj, Unit):
+            if "union_head" in roles:
+                return obj.building.union_head == user
+            if "resident" in roles:
+                # A resident can view or edit their own unit
+                from apps.accounts.models import ResidentProfile
+                return ResidentProfile.objects.filter(user=user, unit=obj).exists()
 
         if "resident" in roles and hasattr(obj, "user"):
             return obj.user == user
