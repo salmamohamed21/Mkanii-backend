@@ -1,4 +1,5 @@
 import os
+import dj_database_url
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -6,10 +7,10 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'replace-me-in-prod')
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+SECRET_KEY = os.environ.get("SECRET_KEY")
+DEBUG = False
 #ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["api.makanii.cloud"]
 
 INSTALLED_APPS = [
     'django_filters',
@@ -28,13 +29,12 @@ INSTALLED_APPS = [
     'channels',
 
         # local apps
-        'mkani.apps.accounts',
-        'mkani.apps.buildings',
-        'mkani.apps.packages',
-        'mkani.apps.payments',
-        'mkani.apps.maintenance',
-        'mkani.apps.notifications',
-        'mkani.apps.core',
+        'apps.accounts',
+        'apps.buildings',
+        'apps.packages',
+        'apps.payments',
+        'apps.notifications',
+        'apps.core',
 ]
 
 MIDDLEWARE = [
@@ -47,30 +47,22 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'mkani.apps.accounts.middleware.AutoRefreshTokenMiddleware',
-    'mkani.middlewares.JWTAuthFromCookieMiddleware',
+    'apps.accounts.middleware.AutoRefreshTokenMiddleware',
+    'middlewares.JWTAuthFromCookieMiddleware',
 ]
 
-ROOT_URLCONF = 'mkani.urls'
-WSGI_APPLICATION = 'mkani.wsgi.application'
-ASGI_APPLICATION = 'mkani.asgi.application'
+ROOT_URLCONF = 'urls'
+WSGI_APPLICATION = 'wsgi.application'
+ASGI_APPLICATION = 'asgi.application'
 
-# Database (Postgres by default)
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'mkani_db'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'mosa$555#Mo'),
-        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
-    }
+    "default": dj_database_url.config(default=os.environ.get("DATABASE_URL"))
 }
 
 AUTH_USER_MODEL = 'accounts.User'
 
 AUTHENTICATION_BACKENDS = [
-    'mkani.apps.accounts.backends.EmailBackend',  # تسجيل الدخول بالإيميل
+    'apps.accounts.backends.EmailBackend',  # تسجيل الدخول بالإيميل
     'django.contrib.auth.backends.ModelBackend',  # الاحتياطي
 ]
 
@@ -83,6 +75,7 @@ USE_TZ = True
 LOCALE_PATHS = [BASE_DIR / 'locale']
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -106,7 +99,7 @@ TEMPLATES = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'mkani.apps.accounts.authentication.CookieJWTAuthentication',
+        'apps.accounts.authentication.CookieJWTAuthentication',
     ),
 }
 
@@ -125,10 +118,13 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
-# Channels (basic)
+# Channels
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [os.environ.get('REDIS_URL', 'redis://localhost:6379/1')],
+        },
     },
 }
 
@@ -191,10 +187,10 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # Cookie settings
-SESSION_COOKIE_SECURE = False  # True in production with HTTPS
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SAMESITE = 'None'
-CSRF_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_TRUSTED_ORIGINS = [
     "https://app.makanii.cloud",
     "https://api.makanii.cloud",

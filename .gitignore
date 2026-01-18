@@ -4,6 +4,9 @@ __pycache__/
 *.pyo
 *.pyd
 *.sqlite3
+*.egg-info/
+dist/
+build/
 
 # Virtualenv
 .venv/
@@ -13,9 +16,33 @@ venv/
 # IDEs
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # Environment variables
 .env
+.env.local
+.env.*.local
 
 # Logs
 *.log
+logs/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+media/
+staticfiles/
+*.sqlite
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+*.bak

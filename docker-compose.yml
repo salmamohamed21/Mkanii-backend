@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: mkani_db
+      POSTGRES_USER: mkani_user
+      POSTGRES_PASSWORD: mkani_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn wsgi:application --bind 0.0.0.0:8000 --reload"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - DJANGO_SETTINGS_MODULE=settings.dev
+      - DATABASE_URL=postgresql://mkani_user:mkani_password@db:5432/mkani_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=django-insecure-dev-key-change-in-production
+      - ALLOWED_HOSTS=localhost,127.0.0.1,web
+    depends_on:
+      - db
+      - redis
+
+  celery:
+    build: .
+    command: celery -A core worker -l info
+    volumes:
+      - .:/app
+    environment:
+      - DEBUG=False
+      - DJANGO_SETTINGS_MODULE=settings.dev
+      - DATABASE_URL=postgresql://mkani_user:mkani_password@db:5432/mkani_db
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=django-insecure-dev-key-change-in-production
+    depends_on:
+      - db
+      - redis
+      - web
+
+volumes:
+  postgres_data:

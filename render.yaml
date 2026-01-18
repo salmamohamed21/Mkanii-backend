@@ -1,8 +1,13 @@
 services:
   - type: web
     name: mkani-backend
-    env: python
-    buildCommand: ""
-    startCommand: gunicorn mkani.wsgi:application
+    env: docker
+    dockerfilePath: ./Dockerfile
+    startCommand: ""
     plan: free
     autoDeploy: true
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: settings.prod
+      - key: ALLOWED_HOSTS
+        value: api.makanii.cloud

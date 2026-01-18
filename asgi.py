@@ -2,15 +2,15 @@ import os
 import sys
 from pathlib import Path
 
-# Add the project root to sys.path to make 'mkani' module importable
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Add the project root to sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 import apps.notifications.routing as notifications_routing
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings.base")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings.prod")
 
 django_asgi_app = get_asgi_application()
 
