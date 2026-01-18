@@ -112,9 +112,10 @@ SIMPLE_JWT = {
     'ALGORITHM': 'HS256',
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_COOKIE': 'access_token',
-    'AUTH_COOKIE_SECURE': False,
+    'AUTH_COOKIE_SECURE': True,
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',
+    'AUTH_COOKIE_SAMESITE': 'None',
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
@@ -164,7 +165,7 @@ SPECTACULAR_SETTINGS = {
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "https://app.makanii.cloud",
+    "https://makanii.cloud",
 ]
 
 # Allow all origins for development (can be restricted in production)
@@ -189,9 +190,12 @@ CORS_ALLOW_HEADERS = [
 # Cookie settings
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SAMESITE = 'Lax'
-CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SAMESITE = 'None'
 CSRF_TRUSTED_ORIGINS = [
-    "https://app.makanii.cloud",
+    "https://makanii.cloud",
     "https://api.makanii.cloud",
 ]
+
+# SSL/HTTPS redirect settings
+SECURE_SSL_REDIRECT = False  # Traefik is responsible for HTTPS redirect
