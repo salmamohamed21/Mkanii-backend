@@ -124,6 +124,13 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',
     'AUTH_COOKIE_SAMESITE': 'None',
+    'AUTH_COOKIE_DOMAIN': '.makanii.cloud',
+    'REFRESH_TOKEN_COOKIE': 'refresh_token',
+    'REFRESH_TOKEN_COOKIE_SECURE': True,
+    'REFRESH_TOKEN_COOKIE_HTTP_ONLY': True,
+    'REFRESH_TOKEN_COOKIE_PATH': '/',
+    'REFRESH_TOKEN_COOKIE_SAMESITE': 'None',
+    'REFRESH_TOKEN_COOKIE_DOMAIN': '.makanii.cloud',
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
 
@@ -198,9 +205,11 @@ CORS_ALLOW_HEADERS = [
 
 # Cookie settings
 SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_DOMAIN = '.makanii.cloud'
+CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_DOMAIN = '.makanii.cloud'
 CSRF_TRUSTED_ORIGINS = [
     "https://makanii.cloud",
     "https://api.makanii.cloud",
