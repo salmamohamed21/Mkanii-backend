@@ -182,15 +182,17 @@ SPECTACULAR_SETTINGS = {
 CORS_ALLOWED_ORIGINS = [
     "https://makanii.cloud",
     "https://www.makanii.cloud",
+    "https://makanii.cloud:443",
+    "https://www.makanii.cloud:443",
 ]
 
 # Allow all origins for development (can be restricted in production)
 CORS_ALLOW_ALL_ORIGINS = False
 
-# Allow credentials (cookies, authorization headers)
+# Allow credentials (cookies, authorization headers) - CRITICAL for JWT in cookies
 CORS_ALLOW_CREDENTIALS = True
 
-# Allow all headers
+# Allow all headers including custom ones
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -201,23 +203,47 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'x-forwarded-for',
+    'x-forwarded-proto',
 ]
 
-# Cookie settings
-SESSION_COOKIE_SECURE = True
-SESSION_COOKIE_SAMESITE = 'None'
-SESSION_COOKIE_DOMAIN = '.makanii.cloud'
-CSRF_COOKIE_SECURE = True
-CSRF_COOKIE_SAMESITE = 'None'
-CSRF_COOKIE_DOMAIN = '.makanii.cloud'
-CSRF_TRUSTED_ORIGINS = [
-    "https://makanii.cloud",
-    "https://api.makanii.cloud",
+# Allow methods
+CORS_ALLOW_METHODS = [
+    'delete',
+    'get',
+    'options',
+    'patch',
+    'post',
+    'put',
 ]
+
+# Expose headers that JavaScript can access
+CORS_EXPOSE_HEADERS = [
+    'content-type',
+    'x-csrftoken',
+]
+
+# Max age for preflight cache (1 day)
+CORS_MAX_AGE = 86400
 
 # SSL/HTTPS redirect settings
 SECURE_SSL_REDIRECT = False  # Traefik is responsible for HTTPS redirect
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# CORS and Cookie settings for HTTPS (required for credentials to work across domains)
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_DOMAIN = '.makanii.cloud'
+
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_DOMAIN = '.makanii.cloud'
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://makanii.cloud",
+    "https://www.makanii.cloud",
+    "https://api.makanii.cloud",
+]
 
 APPEND_SLASH = False
