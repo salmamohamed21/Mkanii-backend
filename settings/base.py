@@ -56,7 +56,14 @@ WSGI_APPLICATION = 'wsgi.application'
 ASGI_APPLICATION = 'asgi.application'
 
 DATABASES = {
-    "default": dj_database_url.config(default=os.environ.get("DATABASE_URL"))
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME", "makanii_db"),
+        "USER": os.getenv("DB_USER", "makanii"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST", "makanii-db"),
+        "PORT": os.getenv("DB_PORT", "5432"),
+    }
 }
 
 AUTH_USER_MODEL = 'accounts.User'
