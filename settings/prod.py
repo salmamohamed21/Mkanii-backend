@@ -9,7 +9,10 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'api.makanii.cloud').split(',')
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
-SECURE_SSL_REDIRECT = True
+
+# Note: SECURE_SSL_REDIRECT is handled by Traefik, not Django
+# Having it in Django causes issues with CORS preflight OPTIONS requests
+SECURE_SSL_REDIRECT = False
 
 # Static files
 STATIC_URL = '/static/'

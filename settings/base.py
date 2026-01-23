@@ -192,6 +192,16 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 
+CORS_ORIGIN_WHITELIST = [
+    "https://makanii.cloud",
+    "https://www.makanii.cloud",
+    "https://api.makanii.cloud",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+]
+
 # Allow all origins for development (can be restricted in production)
 CORS_ALLOW_ALL_ORIGINS = False
 
@@ -211,6 +221,8 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
     'x-forwarded-for',
     'x-forwarded-proto',
+    'cache-control',
+    'pragma',
 ]
 
 # Allow methods
@@ -221,16 +233,24 @@ CORS_ALLOW_METHODS = [
     'patch',
     'post',
     'put',
+    'head',
 ]
 
 # Expose headers that JavaScript can access
 CORS_EXPOSE_HEADERS = [
     'content-type',
     'x-csrftoken',
+    'access-control-allow-credentials',
+    'access-control-allow-headers',
+    'access-control-allow-methods',
+    'access-control-allow-origin',
 ]
 
 # Max age for preflight cache (1 day)
 CORS_MAX_AGE = 86400
+
+# Preflight request cache
+CORS_PREFLIGHT_MAX_AGE = 86400
 
 # SSL/HTTPS redirect settings
 SECURE_SSL_REDIRECT = False  # Traefik is responsible for HTTPS redirect
