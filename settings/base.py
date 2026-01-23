@@ -174,6 +174,7 @@ SPECTACULAR_SETTINGS = {
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     "https://makanii.cloud",
+    "https://www.makanii.cloud",
 ]
 
 # Allow all origins for development (can be restricted in production)
