@@ -35,6 +35,7 @@ INSTALLED_APPS = [
         'apps.payments',
         'apps.notifications',
         'apps.core',
+        'apps.rentals.apps.RentalsConfig',
 ]
 
 MIDDLEWARE = [
