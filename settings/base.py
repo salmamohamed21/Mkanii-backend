@@ -182,8 +182,14 @@ SPECTACULAR_SETTINGS = {
 CORS_ALLOWED_ORIGINS = [
     "https://makanii.cloud",
     "https://www.makanii.cloud",
+    "https://api.makanii.cloud",
     "https://makanii.cloud:443",
     "https://www.makanii.cloud:443",
+    "https://api.makanii.cloud:443",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
 ]
 
 # Allow all origins for development (can be restricted in production)
@@ -244,6 +250,10 @@ CSRF_TRUSTED_ORIGINS = [
     "https://makanii.cloud",
     "https://www.makanii.cloud",
     "https://api.makanii.cloud",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
 ]
 
 APPEND_SLASH = False
