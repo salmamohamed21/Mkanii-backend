@@ -208,3 +208,5 @@ CSRF_TRUSTED_ORIGINS = [
 
 # SSL/HTTPS redirect settings
 SECURE_SSL_REDIRECT = False  # Traefik is responsible for HTTPS redirect
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
