@@ -9,8 +9,10 @@ load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = False
-#ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
-ALLOWED_HOSTS = ["api.makanii.cloud"]
+# Support both environment variable and hardcoded values
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'api.makanii.cloud,makanii.cloud,www.makanii.cloud').split(',')
+# Strip whitespace from hosts
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS]
 
 INSTALLED_APPS = [
     'django_filters',
@@ -50,6 +52,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.accounts.middleware.AutoRefreshTokenMiddleware',
     'middlewares.JWTAuthFromCookieMiddleware',
+    'middlewares.CORSDebugMiddleware',
 ]
 
 ROOT_URLCONF = 'urls'
@@ -178,37 +181,29 @@ SPECTACULAR_SETTINGS = {
     # Add security definitions, etc. here if needed
 }
 
-# CORS settings
+# CORS settings - CRITICAL for cross-origin requests
 CORS_ALLOWED_ORIGINS = [
     "https://makanii.cloud",
     "https://www.makanii.cloud",
     "https://api.makanii.cloud",
-    "https://makanii.cloud:443",
-    "https://www.makanii.cloud:443",
-    "https://api.makanii.cloud:443",
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
 ]
 
-CORS_ORIGIN_WHITELIST = [
-    "https://makanii.cloud",
-    "https://www.makanii.cloud",
-    "https://api.makanii.cloud",
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-]
+# Add http variants for development
+if DEBUG or os.environ.get('ENVIRONMENT') == 'development':
+    CORS_ALLOWED_ORIGINS.extend([
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ])
 
-# Allow all origins for development (can be restricted in production)
-CORS_ALLOW_ALL_ORIGINS = False
+# For maximum compatibility
+CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS
 
-# Allow credentials (cookies, authorization headers) - CRITICAL for JWT in cookies
+# Critical for credentials (cookies, tokens)
 CORS_ALLOW_CREDENTIALS = True
 
-# Allow all headers including custom ones
+# Allow all necessary headers
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -225,7 +220,7 @@ CORS_ALLOW_HEADERS = [
     'pragma',
 ]
 
-# Allow methods
+# Allow all necessary methods
 CORS_ALLOW_METHODS = [
     'delete',
     'get',
@@ -236,35 +231,37 @@ CORS_ALLOW_METHODS = [
     'head',
 ]
 
-# Expose headers that JavaScript can access
+# Expose headers to JavaScript
 CORS_EXPOSE_HEADERS = [
     'content-type',
     'x-csrftoken',
     'access-control-allow-credentials',
-    'access-control-allow-headers',
-    'access-control-allow-methods',
-    'access-control-allow-origin',
 ]
 
-# Max age for preflight cache (1 day)
+# Preflight cache time
 CORS_MAX_AGE = 86400
-
-# Preflight request cache
 CORS_PREFLIGHT_MAX_AGE = 86400
 
+# Don't allow all origins - be specific
+CORS_ALLOW_ALL_ORIGINS = False
+
 # SSL/HTTPS redirect settings
-SECURE_SSL_REDIRECT = False  # Traefik is responsible for HTTPS redirect
+# Note: SECURE_SSL_REDIRECT is handled by reverse proxy (Traefik/nginx)
+SECURE_SSL_REDIRECT = False
 USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # CORS and Cookie settings for HTTPS (required for credentials to work across domains)
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_DOMAIN = '.makanii.cloud'
+CSRF_COOKIE_PATH = '/'
 
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_DOMAIN = '.makanii.cloud'
+SESSION_COOKIE_PATH = '/'
 
 CSRF_TRUSTED_ORIGINS = [
     "https://makanii.cloud",
