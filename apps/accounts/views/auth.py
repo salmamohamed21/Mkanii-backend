@@ -288,14 +288,22 @@ class ResidentProfileViewSet(viewsets.ModelViewSet):
             # Handle unit for owner
             floor_number = data.get('floor_number')
             apartment_number = data.get('apartment_number')
-            area = data.get('area')
-            rooms_count = data.get('rooms_count')
-            # Convert empty strings to None for numeric fields
-            if area == '':
-                area = None
-            if rooms_count == '':
-                rooms_count = None
             
+            try:
+                area = data.get('area')
+                if area is not None and area != '':
+                    area = float(area)
+                else:
+                    area = None
+
+                rooms_count = data.get('rooms_count')
+                if rooms_count is not None and rooms_count != '':
+                    rooms_count = int(rooms_count)
+                else:
+                    rooms_count = None
+            except (ValueError, TypeError):
+                return Response({'error': 'Area and rooms count must be valid numbers.'}, status=status.HTTP_400_BAD_REQUEST)
+
             if not floor_number or not apartment_number:
                 return Response({"error": "Floor number and apartment number are required for owners."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -311,10 +319,10 @@ class ResidentProfileViewSet(viewsets.ModelViewSet):
             )
             if not created:
                 # Update unit if it exists
-                if data.get('area') is not None and data.get('area') != '':
-                    unit.area = data.get('area')
-                if data.get('rooms_count') is not None and data.get('rooms_count') != '':
-                    unit.rooms_count = data.get('rooms_count')
+                if area is not None:
+                    unit.area = area
+                if rooms_count is not None:
+                    unit.rooms_count = rooms_count
                 unit.save()
         else:
             return Response({"error": "Invalid resident type."}, status=status.HTTP_400_BAD_REQUEST)
