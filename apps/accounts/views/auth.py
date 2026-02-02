@@ -339,13 +339,18 @@ class ResidentProfileViewSet(viewsets.ModelViewSet):
         if resident_profile.unit and resident_profile.unit.building and resident_profile.unit.building.union_head:
             from apps.notifications.models import Notification
             union_head = resident_profile.unit.building.union_head
-            owner_name = resident_profile.owner.full_name if resident_profile.owner else 'غير محدد'
-            owner_phone = resident_profile.owner.phone_number if resident_profile.owner else 'غير محدد'
+            
+            owner = resident_profile.owner
+            if resident_profile.resident_type == 'owner':
+                owner = resident_profile.user
+
+            owner_name = owner.full_name if owner else 'غير محدد'
+            owner_phone = owner.phone_number if owner else 'غير محدد'
 
             Notification.objects.create(
                 user=union_head,
                 title="طلب إضافة ساكن جديد",
-                message=f"تم طلب إضافة ساكن جديد: {resident_profile.user.full_name} للشقة {resident_profile.apartment_number} في الدور {resident_profile.floor_number}. بيانات المالك: {owner_name} - {owner_phone}. يرجى المراجعة والموافقة."
+                message=f"تم طلب إضافة ساكن جديد: {resident_profile.user.full_name} للشقة {resident_profile.unit.apartment_number} في الدور {resident_profile.unit.floor_number}. بيانات المالك: {owner_name} - {owner_phone}. يرجى المراجعة والموافقة."
             )
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
